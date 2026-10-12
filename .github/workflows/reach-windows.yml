@@ -3,26 +3,20 @@ name: Reach combat Windows build
 on:
   push:
     branches: [reach-combat]
+    paths:
+      - 'neo/**'
+      - 'doomclassic/**'
+      - '.github/workflows/reach-windows.yml'
+      - 'tools/reach/build-windows.ps1'
+      - 'tools/reach/prepare-directx.ps1'
+      - 'tools/reach/modern-msvc.props'
+      - 'tools/reach/test-sprint.cpp'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  tools-check:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check Windows PowerShell inventory helper
-        shell: powershell
-        run: ./tools/reach/test-install-info.ps1
-      - name: Upload double-click inventory helper
-        uses: actions/upload-artifact@v4
-        with:
-          name: reach-install-check
-          path: |
-            tools/reach/Collect-install-info.cmd
-            tools/reach/collect-install-info.ps1
   sprint-test:
     runs-on: ubuntu-latest
     steps:

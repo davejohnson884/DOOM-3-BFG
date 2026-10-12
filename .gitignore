@@ -1,0 +1,4 @@
+/build/
+/tools/reach/reach-install-info-*.json
+/tools/reach/reach-combat-data-*/
+/tools/reach/reach-combat-data-*.zip

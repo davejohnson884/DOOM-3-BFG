@@ -1,0 +1,36 @@
+name: Reach combat collection tools
+
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - '.github/workflows/reach-tools.yml'
+      - 'tools/reach/Collect-*.cmd'
+      - 'tools/reach/collect-*.ps1'
+      - 'tools/reach/test-*.ps1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tools-check:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Windows PowerShell inventory helper
+        shell: powershell
+        run: ./tools/reach/test-install-info.ps1
+      - name: Check resource text collection
+        shell: powershell
+        run: ./tools/reach/test-combat-data.ps1
+      - name: Upload double-click collection helpers
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-collection-tools
+          path: |
+            tools/reach/Collect-install-info.cmd
+            tools/reach/collect-install-info.ps1
+            tools/reach/Collect-combat-data.cmd
+            tools/reach/collect-combat-data.ps1
