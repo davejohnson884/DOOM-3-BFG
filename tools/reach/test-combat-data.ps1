@@ -65,3 +65,8 @@ Make-Resource (Join-Path $bfg 'base/_common.resources') '../escape.script'
 if ($LASTEXITCODE -eq 0) { throw 'An unsafe archive path was accepted.' }
 if (@(Get-ChildItem $output -Filter '*.zip').Count -ne 1) { throw 'Invalid input produced a ZIP.' }
 Write-Host 'PASS: resource endianness, text-only extraction, exact payloads and traversal rejection'
+# The deliberately rejected archive exited 1, and all assertions above checked
+# that outcome. GitHub's PowerShell wrapper otherwise returns that stale native
+# exit code even when the test script completes successfully.
+$global:LASTEXITCODE = 0
+Write-Host '::notice title=Resource collector test::PASS: valid text extraction and expected rejection of an unsafe archive'
