@@ -44,7 +44,18 @@ If you have questions concerning this license or the applicable additional terms
 #ifndef _D3SDK
 #ifndef GAME_DLL
 
+#if _MSC_VER >= 1900
+// Current ATL requires post-XP APIs such as LCMapStringEx. Keep the original
+// XP target for the original compiler, and a Windows 7 baseline for modern MSVC.
+#ifndef WINVER
+#define WINVER 0x0601
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT WINVER
+#endif
+#else
 #define WINVER				0x501
+#endif
 
 #include <winsock2.h>
 #include <mmsystem.h>
