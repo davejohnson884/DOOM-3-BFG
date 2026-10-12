@@ -4,7 +4,11 @@ Target: Halo Reach combat inside Steam Doom 3 BFG, using the owner's Steam MCC R
 
 ## Current status
 
-Development branch: `reach-combat`. The Windows workflow is an initial baseline build attempt using MSVC v143 and the authenticated Microsoft DirectX June 2010 SDK download. The original source targets Visual Studio 2010; compatibility with the hosted compiler is **not yet verified**. Compilation does not prove in-game readiness. No converted Halo assets or working Reach weapons are included yet.
+Development branch: `reach-combat`. An opt-in sprint prototype is implemented: forward-only grounded sprint, weapon lowering, interruption on fire/zoom/reload, firing suppression during sprint and recovery, and a minimum charge to restart. Stock mode and multiplayer use the original running path. Sprint/recovery state resets on loading a save; existing serialized stamina is retained. No converted Halo assets or working Reach weapons are included yet.
+
+The isolated sprint state-machine scenarios pass under GCC in C++98 mode. They check interruption/recovery, charge exhaustion, restart gating and reset behavior; they do not validate player physics, animations or game startup. The Windows workflow uses MSVC v143 and a signature-verified Microsoft DirectX June 2010 SDK download. The original source targets Visual Studio 2010; compatibility with the hosted compiler is **not yet verified**. Compilation does not prove in-game readiness.
+
+`reach-prototype.cfg` contains initial tuning, not authentic Reach stats. Apply it only in a backed-up lab once a compiled executable is verified. Launch-time `+set g_reachCombat 0` disables the prototype; remove the prototype config and restore your original movement/bind settings to restore the full stock configuration. Accurate Reach sprint speed, charge and recovery timing still require donor-data inspection or measurements.
 
 The workflow keeps the SDK installation out of the checkout, verifies the SDK installer's Microsoft signature before extraction, and uploads logs even when the build fails. A successful build uploads `reach-bfg-win32`; do not replace your Steam executable yet. A backed-up lab installation and runtime smoke test come first.
 

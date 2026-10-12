@@ -41,6 +41,10 @@ idCVar flashlight_batteryFlickerPercent( "flashlight_batteryFlickerPercent", ".1
 // No longer userinfo, but I don't want to rename the cvar
 idCVar ui_showGun( "ui_showGun", "1", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "show gun" );
 
+idCVar g_reachCombat( "g_reachCombat", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "enable the experimental single-player Reach combat prototype" );
+idCVar g_reachSprintRecoverMS( "g_reachSprintRecoverMS", "180", CVAR_GAME | CVAR_INTEGER, "weapon recovery after sprint, in milliseconds", 0, 2000 );
+idCVar g_reachSprintMinimumCharge( "g_reachSprintMinimumCharge", "0.25", CVAR_GAME | CVAR_FLOAT, "minimum stamina fraction required to start sprint", 0.0f, 1.0f );
+
 // Client-authoritative stuff
 idCVar pm_clientAuthoritative_debug( "pm_clientAuthoritative_debug", "0", CVAR_BOOL, "" );
 idCVar pm_controllerShake_damageMaxMag( "pm_controllerShake_damageMaxMag", "60.0f", CVAR_FLOAT, "" );
@@ -1538,6 +1542,7 @@ idPlayer::Init
 ==============
 */
 void idPlayer::Init() {
+	reachSprint.Reset();
 	const char			*value;
 	const idKeyValue	*kv;
 
@@ -2306,6 +2311,8 @@ idPlayer::Restore
 ===========
 */
 void idPlayer::Restore( idRestoreGame *savefile ) {
+	// Do not resume a transient sprint action using timestamps from before loading.
+	reachSprint.Reset();
 	int	  i;
 	int	  num;
 	float set;
@@ -3362,7 +3369,8 @@ void idPlayer::UpdateConditions() {
 		AI_STRAFE_RIGHT	= false;
 	}
 
-	AI_RUN			= ( usercmd.buttons & BUTTON_RUN ) && ( ( !pm_stamina.GetFloat() ) || ( stamina > pm_staminathreshold.GetFloat() ) );
+	AI_RUN			= g_reachCombat.GetBool() && !common->IsMultiplayer() ? reachSprint.IsActive() :
+		( usercmd.buttons & BUTTON_RUN ) && ( ( !pm_stamina.GetFloat() ) || ( stamina > pm_staminathreshold.GetFloat() ) );
 	AI_DEAD			= ( health <= 0 );
 }
 
@@ -3419,6 +3427,9 @@ extern idCVar ui_autoSwitch;
 void idPlayer::FireWeapon() {
 	idMat3 axis;
 	idVec3 muzzle;
+	if ( g_reachCombat.GetBool() && !common->IsMultiplayer() && reachSprint.BlocksWeapon( gameLocal.time ) ) {
+		return;
+	}
 
 	if ( privateCameraView ) {
 		return;
@@ -4821,6 +4832,13 @@ idPlayer::Weapon_Combat
 */
 void idPlayer::Weapon_Combat() {
 	if ( influenceActive || !weaponEnabled || gameLocal.inCinematic || privateCameraView ) {
+		return;
+	}
+	if ( g_reachCombat.GetBool() && !common->IsMultiplayer() && reachSprint.BlocksWeapon( gameLocal.time ) ) {
+		AI_ATTACK_HELD = false;
+		AI_WEAPON_FIRED = false;
+		weapon.GetEntity()->EndAttack();
+		weapon.GetEntity()->LowerWeapon();
 		return;
 	}
 
@@ -6509,6 +6527,9 @@ void idPlayer::PerformImpulse( int impulse ) {
 
 	switch( impulse ) {
 		case IMPULSE_13: {
+			if ( g_reachCombat.GetBool() && !common->IsMultiplayer() ) {
+				reachSprint.Stop( gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
+			}
 			Reload();
 			break;
 		}
@@ -6654,6 +6675,24 @@ idPlayer::AdjustSpeed
 void idPlayer::AdjustSpeed() {
 	float speed;
 	float rate;
+	const bool reachMode = g_reachCombat.GetBool() && !common->IsMultiplayer();
+	if ( reachMode ) {
+		const bool requested = ( usercmd.buttons & BUTTON_RUN ) && usercmd.forwardmove > 0
+			&& !( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_CROUCH | BUTTON_ZOOM ) );
+		const bool allowed = health > 0 && !spectating && !noclip && weaponEnabled && !hiddenWeapon
+			&& !influenceActive && !gameLocal.inCinematic && !privateCameraView
+			&& !objectiveSystemOpen && focusUI == NULL && !physicsObj.OnLadder()
+			&& physicsObj.HasGroundContacts() && !physicsObj.IsCrouching() && !weaponGone
+			&& weapon.IsValid() && weapon.GetEntity()->IsReady() && !weapon.GetEntity()->IsReloading()
+			&& idealWeapon.Get() == currentWeapon
+			&& reachSprint.HasCharge( stamina, pm_stamina.GetFloat(), g_reachSprintMinimumCharge.GetFloat() );
+		reachSprint.Update( requested, allowed, gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
+	} else {
+		reachSprint.Reset();
+	}
+	const bool running = reachMode ? reachSprint.IsActive() :
+		( !physicsObj.OnLadder() && ( usercmd.buttons & BUTTON_RUN )
+		&& ( usercmd.forwardmove || usercmd.rightmove ) && !( usercmd.buttons & BUTTON_CROUCH ) );
 
 	if ( spectating ) {
 		speed = pm_spectatespeed.GetFloat();
@@ -6661,14 +6700,14 @@ void idPlayer::AdjustSpeed() {
 	} else if ( noclip ) {
 		speed = pm_noclipspeed.GetFloat();
 		bobFrac = 0.0f;
-	} else if ( !physicsObj.OnLadder() && ( usercmd.buttons & BUTTON_RUN ) && ( usercmd.forwardmove || usercmd.rightmove ) && !( usercmd.buttons & BUTTON_CROUCH ) ) {
+	} else if ( running ) {
 		if ( !common->IsMultiplayer() && !physicsObj.IsCrouching() && !PowerUpActive( ADRENALINE ) ) {
 			stamina -= MS2SEC( gameLocal.time - gameLocal.previousTime );
 		}
 		if ( stamina < 0 ) {
 			stamina = 0;
 		}
-		if ( ( !pm_stamina.GetFloat() ) || ( stamina > pm_staminathreshold.GetFloat() ) ) {
+		if ( reachMode || ( !pm_stamina.GetFloat() ) || ( stamina > pm_staminathreshold.GetFloat() ) ) {
 			bobFrac = 1.0f;
 		} else if ( pm_staminathreshold.GetFloat() <= 0.0001f ) {
 			bobFrac = 0.0f;

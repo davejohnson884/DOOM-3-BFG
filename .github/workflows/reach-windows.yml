@@ -9,6 +9,14 @@ permissions:
   contents: read
 
 jobs:
+  sprint-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check sprint action rules
+        run: |
+          g++ -std=c++98 -Wall -Wextra -Werror tools/reach/test-sprint.cpp -o /tmp/reach-sprint-test
+          /tmp/reach-sprint-test
   build:
     runs-on: windows-2022
     timeout-minutes: 40

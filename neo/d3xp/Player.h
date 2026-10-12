@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #define __GAME_PLAYER_H__
 
 #include "PredictedValue.h"
+#include "ReachSprint.h"
 
 /*
 ===============================================================================
@@ -834,6 +835,7 @@ private:
 	void					UpdateViewAngles();
 	void					EvaluateControls();
 	void					AdjustSpeed();
+	reachSprint_t			reachSprint;
 	void					AdjustBodyAngles();
 	void					InitAASLocation();
 	void					SetAASLocation();
