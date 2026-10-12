@@ -13,7 +13,12 @@ if (-not $env:RUNNER_TEMP) {
 }
 New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 $installer = Join-Path $Destination 'DXSDK_Jun10.exe'
-$uri = 'https://download.microsoft.com/download/A/E/7/AE743F1F-632B-4809-87A9-9F2A2791BAA1/DXSDK_Jun10.exe'
+$page = Invoke-WebRequest -Uri 'https://www.microsoft.com/en-us/download/details.aspx?id=6812'
+$links = [regex]::Matches($page.Content, 'https://download\.microsoft\.com/download/[^"<>\s\\]+/DXSDK_Jun10\.exe') |
+    ForEach-Object { $_.Value } | Select-Object -Unique
+if (@($links).Count -ne 1) { throw 'Could not resolve a unique June 2010 SDK download from the Microsoft download page.' }
+$uri = @($links)[0]
+Write-Host "Downloading SDK from its Microsoft download-page link: $uri"
 Invoke-WebRequest -Uri $uri -OutFile $installer
 $signature = Get-AuthenticodeSignature $installer
 if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation(?:,|$)') {
