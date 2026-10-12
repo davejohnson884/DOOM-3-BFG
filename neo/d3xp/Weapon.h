@@ -132,6 +132,7 @@ public:
 	void					OwnerDied();
 	void					BeginAttack();
 	void					EndAttack();
+	bool					QuickMelee( float distance, float damageScale );
 	bool					IsReady() const;
 	bool					IsReloading() const;
 	bool					IsHolstered() const;
@@ -406,6 +407,7 @@ private:
 	void					Event_CreateProjectile();
 	void					Event_EjectBrass();
 	void					Event_Melee();
+	bool					PerformMelee( bool quick, float distance, float damageScale );
 	void					Event_GetWorldModel();
 	void					Event_AllowDrop( int allow );
 	void					Event_AutoReload();

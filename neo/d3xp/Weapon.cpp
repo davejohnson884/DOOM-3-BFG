@@ -3965,22 +3965,39 @@ idWeapon::Event_Melee
 =====================
 */
 void idWeapon::Event_Melee() {
+	idThread::ReturnInt( PerformMelee( false, 0.0f, 1.0f ) );
+}
+
+bool idWeapon::QuickMelee( float distance, float damageScale ) {
+	if ( owner == NULL || weaponDef == NULL || common->IsMultiplayer() ) { return false; }
+	return PerformMelee( true, distance, damageScale );
+}
+
+bool idWeapon::PerformMelee( bool quick, float distance, float damageScale ) {
 	idEntity	*ent;
 	trace_t		tr;
 
 	if ( weaponDef == NULL ) {
 		gameLocal.Error( "No weaponDef on '%s'", this->GetName() );
-		return;
+		return false;
 	}
 
-	if ( meleeDef == NULL ) {
+	const char *attackName = quick ? weaponDef->dict.GetString( "def_reach_melee", "damage_fists" ) : meleeDefName.c_str();
+	const idDeclEntityDef *attackDef = quick ? gameLocal.FindEntityDef( attackName, false ) : meleeDef;
+	if ( attackDef == NULL ) {
+		if ( quick ) {
+			gameLocal.Warning( "No quick melee damage definition '%s'", attackName );
+			return false;
+		}
 		gameLocal.Error( "No meleeDef on '%s'", weaponDef->dict.GetString( "classname" ) );
-		return;
+		return false;
 	}
 
 	if ( !common->IsClient() ) {
 		idVec3 start = playerViewOrigin;
-		idVec3 end = start + playerViewAxis[0] * ( meleeDistance * owner->PowerUpModifier( MELEE_DISTANCE ) );
+		idMat3 aim = playerViewAxis;
+		if ( quick ) { owner->GetViewPos( start, aim ); }
+		idVec3 end = start + aim[0] * ( ( quick ? distance : meleeDistance ) * owner->PowerUpModifier( MELEE_DISTANCE ) );
 		gameLocal.clip.TracePoint( tr, start, end, MASK_SHOT_RENDERMODEL, owner );
 		if ( tr.fraction < 1.0f ) {
 			ent = gameLocal.GetTraceEntity( tr );
@@ -3996,16 +4013,15 @@ void idWeapon::Event_Melee() {
 		}
 
 		bool hit = false;
-		const char *hitSound = meleeDef->dict.GetString( "snd_miss" );
+		const char *hitSound = attackDef->dict.GetString( "snd_miss" );
 
 		if ( ent != NULL ) {
 
-			float push = meleeDef->dict.GetFloat( "push" );
+			float push = attackDef->dict.GetFloat( "push" );
 			idVec3 impulse = -push * owner->PowerUpModifier( SPEED ) * tr.c.normal;
 
 			if ( gameLocal.world->spawnArgs.GetBool( "no_Weapons" ) && ( ent->IsType( idActor::Type ) || ent->IsType( idAFAttachment::Type) ) ) {
-				idThread::ReturnInt( 0 );
-				return;
+				return false;
 			}
 
 			ent->ApplyImpulse( this, tr.c.id, tr.c.point, impulse );
@@ -4025,15 +4041,15 @@ void idWeapon::Event_Melee() {
 
 			if ( ent->fl.takedamage ) {
 				idVec3 kickDir, globalKickDir;
-				meleeDef->dict.GetVector( "kickDir", "0 0 0", kickDir );
-				globalKickDir = muzzleAxis * kickDir;
+				attackDef->dict.GetVector( "kickDir", "0 0 0", kickDir );
+				globalKickDir = ( quick ? aim : muzzleAxis ) * kickDir;
 				//Adjust the melee powerup modifier for the invulnerability boss fight
-				float mod = owner->PowerUpModifier( MELEE_DAMAGE );
+				float mod = owner->PowerUpModifier( MELEE_DAMAGE ) * damageScale;
 				if(!strcmp(ent->GetEntityDefName(), "monster_hunter_invul")) {
 					//Only do a quater of the damage mod
 					mod *= 0.25f;
 				}
-				ent->Damage( owner, owner, globalKickDir, meleeDefName, mod, tr.c.id );
+				ent->Damage( owner, owner, globalKickDir, attackName, mod, tr.c.id );
 				hit = true;
 			}
 
@@ -4041,13 +4057,13 @@ void idWeapon::Event_Melee() {
 
 				if ( ent->spawnArgs.GetBool( "bleed" ) ) {
 
-					hitSound = meleeDef->dict.GetString( owner->PowerUpActive( BERSERK ) ? "snd_hit_berserk" : "snd_hit" );
+					hitSound = attackDef->dict.GetString( owner->PowerUpActive( BERSERK ) ? "snd_hit_berserk" : "snd_hit" );
 
-					ent->AddDamageEffect( tr, impulse, meleeDef->dict.GetString( "classname" ) );
+					ent->AddDamageEffect( tr, impulse, attackDef->dict.GetString( "classname" ) );
 
 				} else {
 
-					int type = tr.c.material->GetSurfaceType();
+					int type = tr.c.material != NULL ? tr.c.material->GetSurfaceType() : SURFTYPE_NONE;
 					if ( type == SURFTYPE_NONE ) {
 						type = GetDefaultSurfaceType();
 					}
@@ -4055,9 +4071,9 @@ void idWeapon::Event_Melee() {
 					const char *materialType = gameLocal.sufaceTypeNames[ type ];
 
 					// start impact sound based on material type
-					hitSound = meleeDef->dict.GetString( va( "snd_%s", materialType ) );
+					hitSound = attackDef->dict.GetString( va( "snd_%s", materialType ) );
 					if ( *hitSound == '\0' ) {
-						hitSound = meleeDef->dict.GetString( "snd_metal" );
+						hitSound = attackDef->dict.GetString( "snd_metal" );
 					}
 
 					if ( gameLocal.time > nextStrikeFx ) {
@@ -4084,13 +4100,12 @@ void idWeapon::Event_Melee() {
 			StartSoundShader( snd, SND_CHANNEL_BODY2, 0, true, NULL );
 		}
 
-		idThread::ReturnInt( hit );
 		owner->WeaponFireFeedback( &weaponDef->dict );
-		return;
+		return hit;
 	}
 
-	idThread::ReturnInt( 0 );
 	owner->WeaponFireFeedback( &weaponDef->dict );
+	return false;
 }
 
 /*

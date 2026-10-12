@@ -11,6 +11,7 @@ on:
       - 'tools/reach/prepare-directx.ps1'
       - 'tools/reach/modern-msvc.props'
       - 'tools/reach/test-sprint.cpp'
+      - 'tools/reach/test-actions.cpp'
   workflow_dispatch:
 
 permissions:
@@ -21,10 +22,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check sprint action rules
+      - name: Check combat action rules
         run: |
           g++ -std=c++98 -Wall -Wextra -Werror tools/reach/test-sprint.cpp -o /tmp/reach-sprint-test
           /tmp/reach-sprint-test
+          g++ -std=c++98 -Wall -Wextra -Werror tools/reach/test-actions.cpp -o /tmp/reach-actions-test
+          /tmp/reach-actions-test
   build:
     runs-on: windows-2022
     timeout-minutes: 40

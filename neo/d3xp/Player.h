@@ -31,6 +31,7 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "PredictedValue.h"
 #include "ReachSprint.h"
+#include "ReachAction.h"
 
 /*
 ===============================================================================
@@ -836,6 +837,10 @@ private:
 	void					EvaluateControls();
 	void					AdjustSpeed();
 	reachSprint_t			reachSprint;
+	reachAction_t			reachAction;
+	bool					CanReachAction();
+	void					BeginReachAction( reachActionKind_t kind );
+	bool					ThrowReachGrenade();
 	void					AdjustBodyAngles();
 	void					InitAASLocation();
 	void					SetAASLocation();

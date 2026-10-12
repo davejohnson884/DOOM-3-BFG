@@ -44,6 +44,14 @@ idCVar ui_showGun( "ui_showGun", "1", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "sho
 idCVar g_reachCombat( "g_reachCombat", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "enable the experimental single-player Reach combat prototype" );
 idCVar g_reachSprintRecoverMS( "g_reachSprintRecoverMS", "180", CVAR_GAME | CVAR_INTEGER, "weapon recovery after sprint, in milliseconds", 0, 2000 );
 idCVar g_reachSprintMinimumCharge( "g_reachSprintMinimumCharge", "0.25", CVAR_GAME | CVAR_FLOAT, "minimum stamina fraction required to start sprint", 0.0f, 1.0f );
+idCVar g_reachMeleeWindupMS( "g_reachMeleeWindupMS", "100", CVAR_GAME | CVAR_INTEGER, "prototype melee delay before the hit trace", 0, 2000 );
+idCVar g_reachMeleeRecoverMS( "g_reachMeleeRecoverMS", "500", CVAR_GAME | CVAR_INTEGER, "prototype melee recovery after the hit trace", 0, 2000 );
+idCVar g_reachMeleeDistance( "g_reachMeleeDistance", "48", CVAR_GAME | CVAR_FLOAT, "prototype melee trace distance", 1.0f, 128.0f );
+idCVar g_reachMeleeDamageScale( "g_reachMeleeDamageScale", "1", CVAR_GAME | CVAR_FLOAT, "damage multiplier for the prototype's BFG melee definition", 0.0f, 10.0f );
+idCVar g_reachGrenadeWindupMS( "g_reachGrenadeWindupMS", "550", CVAR_GAME | CVAR_INTEGER, "prototype quick throw delay before spawning the grenade", 0, 2000 );
+idCVar g_reachGrenadeRecoverMS( "g_reachGrenadeRecoverMS", "450", CVAR_GAME | CVAR_INTEGER, "prototype recovery after a quick grenade throw", 0, 2000 );
+idCVar g_reachGrenadePower( "g_reachGrenadePower", "1.5", CVAR_GAME | CVAR_FLOAT, "launch multiplier for the prototype's BFG grenade", 0.1f, 6.0f );
+idCVar g_reachCombatDebug( "g_reachCombatDebug", "0", CVAR_GAME | CVAR_BOOL, "log prototype melee and grenade outcomes" );
 
 // Client-authoritative stuff
 idCVar pm_clientAuthoritative_debug( "pm_clientAuthoritative_debug", "0", CVAR_BOOL, "" );
@@ -1543,6 +1551,7 @@ idPlayer::Init
 */
 void idPlayer::Init() {
 	reachSprint.Reset();
+	reachAction.Reset();
 	const char			*value;
 	const idKeyValue	*kv;
 
@@ -2313,6 +2322,7 @@ idPlayer::Restore
 void idPlayer::Restore( idRestoreGame *savefile ) {
 	// Do not resume a transient sprint action using timestamps from before loading.
 	reachSprint.Reset();
+	reachAction.Reset();
 	int	  i;
 	int	  num;
 	float set;
@@ -3427,7 +3437,8 @@ extern idCVar ui_autoSwitch;
 void idPlayer::FireWeapon() {
 	idMat3 axis;
 	idVec3 muzzle;
-	if ( g_reachCombat.GetBool() && !common->IsMultiplayer() && reachSprint.BlocksWeapon( gameLocal.time ) ) {
+	if ( g_reachCombat.GetBool() && !common->IsMultiplayer()
+		&& ( reachSprint.BlocksWeapon( gameLocal.time ) || reachAction.BlocksWeapon( gameLocal.time ) ) ) {
 		return;
 	}
 
@@ -4431,6 +4442,9 @@ idPlayer::Reload
 ===============
 */
 void idPlayer::Reload() {
+	if ( g_reachCombat.GetBool() && !common->IsMultiplayer() && reachAction.BlocksWeapon( gameLocal.time ) ) {
+		return;
+	}
 	if ( spectating || gameLocal.inCinematic || influenceActive ) {
 		return;
 	}
@@ -4827,14 +4841,100 @@ idUserInterface *idPlayer::ActiveGui() {
 
 /*
 ===============
-idPlayer::Weapon_Combat
+Reach prototype quick actions
 ===============
 */
+bool idPlayer::CanReachAction() {
+	return g_reachCombat.GetBool() && !common->IsMultiplayer() && health > 0
+		&& !spectating && !noclip && weaponEnabled && !hiddenWeapon && !weaponGone
+		&& !influenceActive && !gameLocal.inCinematic && !privateCameraView
+		&& !objectiveSystemOpen && ActiveGui() == NULL && !g_dragEntity.GetBool()
+		&& !( focusCharacter && focusCharacter->health > 0 )
+		&& gameLocal.world && !gameLocal.world->spawnArgs.GetBool( "no_Weapons" )
+		&& weapon.IsValid() && weapon.GetEntity()->IsLinked()
+		&& weapon.GetEntity()->IsReady() && !weapon.GetEntity()->IsReloading()
+		&& currentWeapon >= 0 && idealWeapon.Get() == currentWeapon;
+}
+
+void idPlayer::BeginReachAction( reachActionKind_t kind ) {
+	if ( !CanReachAction() || AI_ATTACK_HELD || ( usercmd.buttons & BUTTON_ATTACK ) ) {
+		return;
+	}
+	if ( kind == REACH_ACTION_GRENADE ) {
+		const ammo_t ammo = inventory.AmmoIndexForAmmoClass( "ammo_grenades" );
+		if ( ammo <= 0 || ammo >= AMMO_NUMTYPES || ( !g_infiniteAmmo.GetBool() && !inventory.HasAmmo( ammo, 1 ) ) ) {
+			if ( g_reachCombatDebug.GetBool() ) { gameLocal.Printf( "[Reach] grenade rejected: no grenade ammo\n" ); }
+			return;
+		}
+	}
+	const int windup = kind == REACH_ACTION_MELEE ? g_reachMeleeWindupMS.GetInteger() : g_reachGrenadeWindupMS.GetInteger();
+	const int recovery = kind == REACH_ACTION_MELEE ? g_reachMeleeRecoverMS.GetInteger() : g_reachGrenadeRecoverMS.GetInteger();
+	if ( reachAction.Begin( kind, gameLocal.time, windup, recovery ) ) {
+		reachSprint.Stop( gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
+		weapon.GetEntity()->EndAttack();
+		AI_ATTACK_HELD = false;
+	}
+}
+
+bool idPlayer::ThrowReachGrenade() {
+	const ammo_t ammo = inventory.AmmoIndexForAmmoClass( "ammo_grenades" );
+	if ( ammo <= 0 || ammo >= AMMO_NUMTYPES || ( !g_infiniteAmmo.GetBool() && !inventory.HasAmmo( ammo, 1 ) ) ) {
+		return false;
+	}
+	const idDict *grenadeWeapon = gameLocal.FindEntityDefDict( spawnArgs.GetString( "def_reach_grenade", "weapon_handgrenade" ), false );
+	if ( grenadeWeapon == NULL ) { return false; }
+	const idDict *projectileDef = gameLocal.FindEntityDefDict( grenadeWeapon->GetString( "def_projectile" ), false );
+	if ( projectileDef == NULL ) { return false; }
+	idEntity *entity = NULL;
+	if ( !gameLocal.SpawnEntityDef( *projectileDef, &entity, false ) || entity == NULL ) { return false; }
+	if ( !entity->IsType( idProjectile::Type ) ) {
+		entity->PostEventMS( &EV_Remove, 0 );
+		gameLocal.Warning( "Reach grenade definition is not an idProjectile" );
+		return false;
+	}
+	idProjectile *projectile = static_cast<idProjectile *>( entity );
+	idVec3 eye;
+	idMat3 aim;
+	GetViewPos( eye, aim );
+	projectile->Create( this, eye, aim[0] );
+	idPhysics *physics = projectile->GetPhysics();
+	// Sweep the actual grenade clip shape from inside the owner's bounds to the
+	// hand position, ignoring the owner. Reject a solid position before spending ammo.
+	const idVec3 start = GetPhysics()->GetAbsBounds().GetCenter();
+	trace_t trace;
+	gameLocal.clip.Translation( trace, start, eye + aim[0] * 24.0f, physics->GetClipModel(), physics->GetAxis(), MASK_SHOT_RENDERMODEL, this );
+	if ( gameLocal.clip.Contents( trace.endpos, physics->GetClipModel(), physics->GetAxis(), MASK_SHOT_RENDERMODEL, this ) != 0
+		|| !inventory.UseAmmo( ammo, 1 ) ) {
+		projectile->PostEventMS( &EV_Remove, 0 );
+		return false;
+	}
+	projectile->Launch( trace.endpos, aim[0], physicsObj.GetPushedLinearVelocity(), 0.0f, g_reachGrenadePower.GetFloat(), 1.0f );
+	projectile->StartSound( "snd_throw", SND_CHANNEL_BODY, 0, false, NULL );
+	gameLocal.AlertAI( this );
+	AddProjectilesFired( 1 );
+	return true;
+}
+
 void idPlayer::Weapon_Combat() {
 	if ( influenceActive || !weaponEnabled || gameLocal.inCinematic || privateCameraView ) {
 		return;
 	}
-	if ( g_reachCombat.GetBool() && !common->IsMultiplayer() && reachSprint.BlocksWeapon( gameLocal.time ) ) {
+	if ( g_reachCombat.GetBool() && !common->IsMultiplayer() ) {
+		if ( !CanReachAction() ) { reachAction.CancelPending(); }
+		const reachActionKind_t effect = reachAction.ConsumeEffect( gameLocal.time );
+		if ( effect == REACH_ACTION_MELEE ) {
+			const bool hit = weapon.GetEntity()->QuickMelee( g_reachMeleeDistance.GetFloat(), g_reachMeleeDamageScale.GetFloat() );
+			if ( g_reachCombatDebug.GetBool() ) { gameLocal.Printf( "[Reach] melee resolved: %s\n", hit ? "hit" : "miss" ); }
+		} else if ( effect == REACH_ACTION_GRENADE ) {
+			const bool thrown = ThrowReachGrenade();
+			if ( g_reachCombatDebug.GetBool() ) {
+				const ammo_t ammo = inventory.AmmoIndexForAmmoClass( "ammo_grenades" );
+				gameLocal.Printf( "[Reach] grenade resolved: %s; ammo=%d\n", thrown ? "thrown" : "blocked", inventory.GetInventoryAmmoForType( ammo ) );
+			}
+		}
+	}
+	if ( g_reachCombat.GetBool() && !common->IsMultiplayer()
+		&& ( reachSprint.BlocksWeapon( gameLocal.time ) || reachAction.BlocksWeapon( gameLocal.time ) ) ) {
 		AI_ATTACK_HELD = false;
 		AI_WEAPON_FIRED = false;
 		weapon.GetEntity()->EndAttack();
@@ -6526,6 +6626,14 @@ void idPlayer::PerformImpulse( int impulse ) {
 	}
 
 	switch( impulse ) {
+		case IMPULSE_17: {
+			BeginReachAction( REACH_ACTION_MELEE );
+			break;
+		}
+		case IMPULSE_20: {
+			BeginReachAction( REACH_ACTION_GRENADE );
+			break;
+		}
 		case IMPULSE_13: {
 			if ( g_reachCombat.GetBool() && !common->IsMultiplayer() ) {
 				reachSprint.Stop( gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
@@ -6677,6 +6785,7 @@ void idPlayer::AdjustSpeed() {
 	float rate;
 	const bool reachMode = g_reachCombat.GetBool() && !common->IsMultiplayer();
 	if ( reachMode ) {
+		if ( !CanReachAction() ) { reachAction.CancelPending(); }
 		const bool requested = ( usercmd.buttons & BUTTON_RUN ) && usercmd.forwardmove > 0
 			&& !( usercmd.buttons & ( BUTTON_ATTACK | BUTTON_CROUCH | BUTTON_ZOOM ) );
 		const bool allowed = health > 0 && !spectating && !noclip && weaponEnabled && !hiddenWeapon
@@ -6685,10 +6794,12 @@ void idPlayer::AdjustSpeed() {
 			&& physicsObj.HasGroundContacts() && !physicsObj.IsCrouching() && !weaponGone
 			&& weapon.IsValid() && weapon.GetEntity()->IsReady() && !weapon.GetEntity()->IsReloading()
 			&& idealWeapon.Get() == currentWeapon
+			&& !reachAction.BlocksWeapon( gameLocal.time )
 			&& reachSprint.HasCharge( stamina, pm_stamina.GetFloat(), g_reachSprintMinimumCharge.GetFloat() );
 		reachSprint.Update( requested, allowed, gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
 	} else {
 		reachSprint.Reset();
+		reachAction.Reset();
 	}
 	const bool running = reachMode ? reachSprint.IsActive() :
 		( !physicsObj.OnLadder() && ( usercmd.buttons & BUTTON_RUN )
