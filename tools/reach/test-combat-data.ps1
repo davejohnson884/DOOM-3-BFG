@@ -42,8 +42,8 @@ function Make-Resource([string]$Path, [string]$ScriptName = 'script/test.script'
 Make-Resource (Join-Path $bfg 'base/_common.resources')
 Make-Resource (Join-Path $bfg 'base/_ordered.resources')
 $collector = Join-Path $PSScriptRoot 'collect-combat-data.ps1'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $collector -BfgPath $bfg -OutputDirectory $output
-if ($LASTEXITCODE -ne 0) { throw 'Resource text collection failed.' }
+$result = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $collector -BfgPath $bfg -OutputDirectory $output
+if ($LASTEXITCODE -ne 0) { throw ('Resource text collection failed: ' + ($result -join ' ')) }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = @(Get-ChildItem $output -Filter '*.zip')
 if ($zip.Count -ne 1) { throw 'Expected one resource ZIP.' }

@@ -24,7 +24,16 @@ jobs:
         run: ./tools/reach/test-install-info.ps1
       - name: Check resource text collection
         shell: powershell
-        run: ./tools/reach/test-combat-data.ps1
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            & ./tools/reach/test-combat-data.ps1
+          } catch {
+            $detail = $_.ToString() + ' ' + $_.InvocationInfo.PositionMessage
+            $detail = $detail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Resource collector test::$detail"
+            exit 1
+          }
       - name: Upload double-click collection helpers
         uses: actions/upload-artifact@v4
         with:
