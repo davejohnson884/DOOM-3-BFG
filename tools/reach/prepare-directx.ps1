@@ -1,6 +1,13 @@
 [CmdletBinding()]
 param([string]$Destination = (Join-Path $env:RUNNER_TEMP 'reach-directx-june2010'))
 $ErrorActionPreference = 'Stop'
+trap {
+    # Expose the actual setup failure in the public Actions annotations, where
+    # it can be diagnosed even when authenticated log access is unavailable.
+    $message = $_.ToString().Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+    Write-Host "::error title=DirectX SDK setup::$message"
+    exit 1
+}
 if (-not $env:RUNNER_TEMP) {
     throw 'Run this SDK preparation on a GitHub Windows runner, or supply RUNNER_TEMP explicitly.'
 }
