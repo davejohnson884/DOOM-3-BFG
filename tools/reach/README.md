@@ -12,6 +12,8 @@ The isolated sprint state-machine scenarios pass under GCC in C++98 mode. They c
 
 The workflow keeps the SDK installation out of the checkout, verifies the SDK installer's Microsoft signature before extraction, and uploads logs even when the build fails. A successful build uploads `reach-bfg-win32`; do not replace your Steam executable yet. A backed-up lab installation and runtime smoke test come first.
 
+The modern compiler adapter keeps the original warning level and diagnostics, but does not promote legacy warnings to errors. The original source predates MSVC warnings about member shadowing, specialization storage classes and inline allocation operators. Actual compiler/linker errors still fail the workflow, and the isolated sprint tests use warnings as errors. Source compatibility changes retain the VS2010 annotation path and use SAL on modern MSVC.
+
 ## Runtime and assets
 
 The cloud machine cannot access your PC's Steam folders. Record the install paths for Doom 3 BFG and MCC using Steam Properties → Installed Files → Browse. Reach extraction must first be validated against those files. The existing Universal Modder Halo 3/Minecraft example is a useful reference, but does not establish that Reach first-person animations can be exported or converted.

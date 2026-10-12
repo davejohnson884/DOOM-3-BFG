@@ -14,7 +14,10 @@ $arguments = @(
     '/v:minimal', "/flp:logfile=$buildDirectory/reach-build.log;verbosity=normal",
     "/bl:$buildDirectory/reach-build.binlog"
 )
-if ($Toolset) { $arguments += "/p:PlatformToolset=$Toolset" }
+if ($Toolset) {
+    $arguments += "/p:PlatformToolset=$Toolset"
+    $arguments += "/p:ForceImportBeforeCppTargets=$(Join-Path $PSScriptRoot 'modern-msvc.props')"
+}
 Push-Location (Join-Path $root 'neo')
 try {
     & $msbuild.Source @arguments

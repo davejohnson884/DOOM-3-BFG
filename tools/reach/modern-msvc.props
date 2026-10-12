@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Keep /W4 diagnostics visible. The VS2010 release predates modern
+           shadowing, explicit-specialization and inline-allocation warnings.
+           New combat logic also has a separate test compiled with /WX or -Werror. -->
+      <TreatWarningAsError>false</TreatWarningAsError>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>
