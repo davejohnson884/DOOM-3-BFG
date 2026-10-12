@@ -183,8 +183,14 @@ bulk of the codebase, so it is the best place for analyze pragmas.
 
 
 // checking format strings catches a LOT of errors
+#if _MSC_VER >= 1900
+// Modern MSVC uses SAL rather than the deprecated C++ annotation attributes.
+#include <sal.h>
+#define VERIFY_FORMAT_STRING _Printf_format_string_
+#else
 #include <CodeAnalysis\SourceAnnotations.h>
 #define	VERIFY_FORMAT_STRING	[SA_FormatString(Style="printf")]
+#endif
 
 
 // We need to inform the compiler that Error() and FatalError() will

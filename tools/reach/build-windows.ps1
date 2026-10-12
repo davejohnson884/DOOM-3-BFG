@@ -28,6 +28,13 @@ try {
                 $message = $line.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
                 Write-Host "::error title=Windows compiler::$message"
             }
+            $warnings = Get-Content (Join-Path $buildDirectory 'reach-build.log') |
+                Where-Object { $_ -match 'warning [A-Z]+[0-9]+\s*:' } |
+                Select-Object -Unique -First 8
+            foreach ($line in $warnings) {
+                $message = $line.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+                Write-Host "::warning title=Windows compiler::$message"
+            }
         }
         throw "MSBuild failed with exit code $buildExit. See build/reach-build.log."
     }
