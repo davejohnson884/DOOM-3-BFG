@@ -8,6 +8,9 @@ on:
       - 'tools/reach/Collect-*.cmd'
       - 'tools/reach/collect-*.ps1'
       - 'tools/reach/test-*.ps1'
+      - 'tools/reach/start-playtest.ps1'
+      - 'tools/reach/Start-Reach-playtest.cmd'
+      - 'tools/reach/reach-prototype.cfg'
   workflow_dispatch:
 
 permissions:
@@ -32,6 +35,18 @@ jobs:
             $detail = $_.ToString() + ' ' + $_.InvocationInfo.PositionMessage
             $detail = $detail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
             Write-Host "::error title=Resource collector test::$detail"
+            exit 1
+          }
+      - name: Check isolated playtest preparation
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            & ./tools/reach/test-playtest.ps1
+          } catch {
+            $detail = $_.ToString() + ' ' + $_.InvocationInfo.PositionMessage
+            $detail = $detail.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Playtest preparation test::$detail"
             exit 1
           }
       - name: Upload double-click collection helpers

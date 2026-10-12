@@ -48,6 +48,18 @@ try {
     }
     $binary = Join-Path $buildDirectory "Win32/$Configuration/Doom3BFG.exe"
     if (-not (Test-Path $binary)) { throw "MSBuild returned success but the executable was missing: $binary" }
+    $package = Join-Path $buildDirectory 'reach-playtest'
+    if ((Test-Path $package) -and -not (Test-Path (Join-Path $package '.reach-generated'))) {
+        throw 'The package output directory already exists without a generation marker; move it aside before building.'
+    }
+    New-Item -ItemType Directory -Path $package -Force | Out-Null
+    Set-Content (Join-Path $package '.reach-generated') 'Generated Reach playtest package'
+    Copy-Item $binary (Join-Path $package 'Doom3BFG.exe') -Force
+    foreach ($file in @('start-playtest.ps1', 'Start-Reach-playtest.cmd', 'reach-prototype.cfg', 'PLAYTEST.md')) {
+        Copy-Item (Join-Path $PSScriptRoot $file) (Join-Path $package $file) -Force
+    }
+    @{ sha256 = (Get-FileHash $binary -Algorithm SHA256).Hash } | ConvertTo-Json |
+        Set-Content (Join-Path $package 'build-sha256.json') -Encoding UTF8
     Write-Host "Built $binary"
 } finally {
     Pop-Location

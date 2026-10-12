@@ -12,6 +12,10 @@ on:
       - 'tools/reach/modern-msvc.props'
       - 'tools/reach/test-sprint.cpp'
       - 'tools/reach/test-actions.cpp'
+      - 'tools/reach/start-playtest.ps1'
+      - 'tools/reach/Start-Reach-playtest.cmd'
+      - 'tools/reach/reach-prototype.cfg'
+      - 'tools/reach/PLAYTEST.md'
   workflow_dispatch:
 
 permissions:
@@ -55,5 +59,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reach-bfg-win32
-          path: build/Win32/Release/Doom3BFG.exe
+          path: build/reach-playtest/
           if-no-files-found: error
