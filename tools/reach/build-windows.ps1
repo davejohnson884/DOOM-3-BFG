@@ -1,6 +1,11 @@
 [CmdletBinding()]
 param([string]$Toolset = '', [ValidateSet('Debug', 'Release')][string]$Configuration = 'Release')
 $ErrorActionPreference = 'Stop'
+trap {
+    $message = $_.ToString().Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+    Write-Host "::error title=Windows build::$message"
+    exit 1
+}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 if (-not $env:DXSDK_DIR -or -not (Test-Path (Join-Path $env:DXSDK_DIR 'Include/X3DAudio.h'))) {
     throw 'DXSDK_DIR must point to the June 2010 DirectX SDK.'
@@ -41,7 +46,7 @@ try {
         }
         throw "MSBuild failed with exit code $buildExit. See build/reach-build.log."
     }
-    $binary = Join-Path $buildDirectory "Win32/$Configuration/doomexe.exe"
+    $binary = Join-Path $buildDirectory "Win32/$Configuration/Doom3BFG.exe"
     if (-not (Test-Path $binary)) { throw "MSBuild returned success but the executable was missing: $binary" }
     Write-Host "Built $binary"
 } finally {

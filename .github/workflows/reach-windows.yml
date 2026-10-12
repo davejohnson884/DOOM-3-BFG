@@ -44,5 +44,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reach-bfg-win32
-          path: build/Win32/Release/doomexe.exe
+          path: build/Win32/Release/Doom3BFG.exe
           if-no-files-found: error
