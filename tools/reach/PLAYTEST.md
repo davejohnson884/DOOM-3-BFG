@@ -9,10 +9,11 @@ Start an offline campaign or open the in-game console with `~` and enter these c
 ```
 devmap game/alphalabs1
 give all
-exec reach-prototype.cfg
 ```
 
-Wait for the level to finish loading before the last two commands. This is BFG's in-game console; no Windows terminal commands are needed. The introductory Mars City level disables weapons and is unsuitable for this test. `give all` supplies test weapons/ammo; the prototype does not grant grenades during normal play.
+Wait for the level to finish loading before entering `give all`. This is BFG's in-game console; no Windows terminal commands are needed. The introductory Mars City level disables weapons and is unsuitable for this test. `give all` supplies test weapons/ammo; the prototype does not grant grenades during normal play.
+
+The launcher enables `g_reachLabAutoConfig`, so the player loads `reach_prototype.cfg` after spawning or loading a save. This reapplies V/G bindings after the profile's default controls and restores the test movement tuning. The console should print `[Reach] lab controls loaded: Shift sprint, V melee, G grenade`. To reapply manually, enter `exec reach_prototype.cfg`. If testing an older package with the hyphenated filename, use `exec "reach-prototype.cfg"` with the quotes.
 
 - Equip the machinegun. Hold forward + Shift: it should sprint with the gun lowered. Release Shift and fire: firing should resume after recovery.
 - Press V near a damageable target, then facing empty space: logs should report one hit or miss per accepted action. The weapon should stay in the same slot. Try rapid V/G inputs; actions should not overlap.

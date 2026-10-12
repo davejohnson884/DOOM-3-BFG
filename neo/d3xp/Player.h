@@ -838,6 +838,7 @@ private:
 	void					AdjustSpeed();
 	reachSprint_t			reachSprint;
 	reachAction_t			reachAction;
+	void					ConfigureReachLabControls();
 	bool					CanReachAction();
 	void					BeginReachAction( reachActionKind_t kind );
 	bool					ThrowReachGrenade();

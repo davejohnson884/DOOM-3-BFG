@@ -42,6 +42,7 @@ idCVar flashlight_batteryFlickerPercent( "flashlight_batteryFlickerPercent", ".1
 idCVar ui_showGun( "ui_showGun", "1", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "show gun" );
 
 idCVar g_reachCombat( "g_reachCombat", "0", CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "enable the experimental single-player Reach combat prototype" );
+idCVar g_reachLabAutoConfig( "g_reachLabAutoConfig", "0", CVAR_GAME | CVAR_BOOL, "reapply isolated playtest controls and tuning after player spawn/load" );
 idCVar g_reachSprintRecoverMS( "g_reachSprintRecoverMS", "180", CVAR_GAME | CVAR_INTEGER, "weapon recovery after sprint, in milliseconds", 0, 2000 );
 idCVar g_reachSprintMinimumCharge( "g_reachSprintMinimumCharge", "0.25", CVAR_GAME | CVAR_FLOAT, "minimum stamina fraction required to start sprint", 0.0f, 1.0f );
 idCVar g_reachMeleeWindupMS( "g_reachMeleeWindupMS", "100", CVAR_GAME | CVAR_INTEGER, "prototype melee delay before the hit trace", 0, 2000 );
@@ -1792,6 +1793,8 @@ void idPlayer::Init() {
 	memset( &laserSightRenderEntity, 0, sizeof( laserSightRenderEntity ) );
 	laserSightRenderEntity.hModel = renderModelManager->FindModel( "_BEAM" );
 	laserSightRenderEntity.customShader = declManager->FindMaterial( "stereoRenderLaserSight" );
+
+	ConfigureReachLabControls();
 }
 
 /*
@@ -2658,6 +2661,7 @@ void idPlayer::Restore( idRestoreGame *savefile ) {
 		}		
 	}
 
+	ConfigureReachLabControls();
 }
 
 /*
@@ -4844,7 +4848,16 @@ idUserInterface *idPlayer::ActiveGui() {
 Reach prototype quick actions
 ===============
 */
+void idPlayer::ConfigureReachLabControls() {
+	// Profile defaults load after autoexec, and player definitions reset movement
+	// tuning. Reapply only in the explicitly enabled lab, after initialization.
+	if ( g_reachCombat.GetBool() && g_reachLabAutoConfig.GetBool() && !common->IsMultiplayer() ) {
+		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "exec reach_prototype.cfg\n" );
+	}
+}
+
 bool idPlayer::CanReachAction() {
+	const bool allowLowered = reachSprint.BlocksWeapon( gameLocal.time ) || reachAction.BlocksWeapon( gameLocal.time );
 	return g_reachCombat.GetBool() && !common->IsMultiplayer() && health > 0
 		&& !spectating && !noclip && weaponEnabled && !hiddenWeapon && !weaponGone
 		&& !influenceActive && !gameLocal.inCinematic && !privateCameraView
@@ -4852,12 +4865,15 @@ bool idPlayer::CanReachAction() {
 		&& !( focusCharacter && focusCharacter->health > 0 )
 		&& gameLocal.world && !gameLocal.world->spawnArgs.GetBool( "no_Weapons" )
 		&& weapon.IsValid() && weapon.GetEntity()->IsLinked()
-		&& weapon.GetEntity()->IsReady() && !weapon.GetEntity()->IsReloading()
+		&& weapon.GetEntity()->IsReady( allowLowered ) && !weapon.GetEntity()->IsReloading()
 		&& currentWeapon >= 0 && idealWeapon.Get() == currentWeapon;
 }
 
 void idPlayer::BeginReachAction( reachActionKind_t kind ) {
 	if ( !CanReachAction() || AI_ATTACK_HELD || ( usercmd.buttons & BUTTON_ATTACK ) ) {
+		if ( g_reachCombatDebug.GetBool() ) {
+			gameLocal.Printf( "[Reach] %s rejected: player/weapon not ready or firing\n", kind == REACH_ACTION_MELEE ? "melee" : "grenade" );
+		}
 		return;
 	}
 	if ( kind == REACH_ACTION_GRENADE ) {
@@ -4873,6 +4889,8 @@ void idPlayer::BeginReachAction( reachActionKind_t kind ) {
 		reachSprint.Stop( gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
 		weapon.GetEntity()->EndAttack();
 		AI_ATTACK_HELD = false;
+	} else if ( g_reachCombatDebug.GetBool() ) {
+		gameLocal.Printf( "[Reach] %s rejected: action still recovering\n", kind == REACH_ACTION_MELEE ? "melee" : "grenade" );
 	}
 }
 
@@ -6792,7 +6810,7 @@ void idPlayer::AdjustSpeed() {
 			&& !influenceActive && !gameLocal.inCinematic && !privateCameraView
 			&& !objectiveSystemOpen && focusUI == NULL && !physicsObj.OnLadder()
 			&& physicsObj.HasGroundContacts() && !physicsObj.IsCrouching() && !weaponGone
-			&& weapon.IsValid() && weapon.GetEntity()->IsReady() && !weapon.GetEntity()->IsReloading()
+			&& weapon.IsValid() && weapon.GetEntity()->IsReady( reachSprint.BlocksWeapon( gameLocal.time ) ) && !weapon.GetEntity()->IsReloading()
 			&& idealWeapon.Get() == currentWeapon
 			&& !reachAction.BlocksWeapon( gameLocal.time )
 			&& reachSprint.HasCharge( stamina, pm_stamina.GetFloat(), g_reachSprintMinimumCharge.GetFloat() );

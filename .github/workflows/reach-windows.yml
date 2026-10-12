@@ -14,7 +14,7 @@ on:
       - 'tools/reach/test-actions.cpp'
       - 'tools/reach/start-playtest.ps1'
       - 'tools/reach/Start-Reach-playtest.cmd'
-      - 'tools/reach/reach-prototype.cfg'
+      - 'tools/reach/reach_prototype.cfg'
       - 'tools/reach/PLAYTEST.md'
   workflow_dispatch:
 

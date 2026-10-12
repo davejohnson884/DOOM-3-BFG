@@ -55,7 +55,7 @@ try {
     New-Item -ItemType Directory -Path $package -Force | Out-Null
     Set-Content (Join-Path $package '.reach-generated') 'Generated Reach playtest package'
     Copy-Item $binary (Join-Path $package 'Doom3BFG.exe') -Force
-    foreach ($file in @('start-playtest.ps1', 'Start-Reach-playtest.cmd', 'reach-prototype.cfg', 'PLAYTEST.md')) {
+    foreach ($file in @('start-playtest.ps1', 'Start-Reach-playtest.cmd', 'reach_prototype.cfg', 'PLAYTEST.md')) {
         Copy-Item (Join-Path $PSScriptRoot $file) (Join-Path $package $file) -Force
     }
     @{ sha256 = (Get-FileHash $binary -Algorithm SHA256).Hash } | ConvertTo-Json |

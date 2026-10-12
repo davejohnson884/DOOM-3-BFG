@@ -133,7 +133,7 @@ public:
 	void					BeginAttack();
 	void					EndAttack();
 	bool					QuickMelee( float distance, float damageScale );
-	bool					IsReady() const;
+	bool					IsReady( bool allowLowered = false ) const;
 	bool					IsReloading() const;
 	bool					IsHolstered() const;
 	bool					ShowCrosshair() const;

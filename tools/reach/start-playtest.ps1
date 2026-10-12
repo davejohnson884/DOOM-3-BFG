@@ -61,10 +61,10 @@ if (Test-Path -LiteralPath $originalProfile -PathType Container) {
     Copy-Item -LiteralPath $originalProfile -Destination $backup -Recurse
     Write-Host "Original profile snapshot: $backup"
 }
-Copy-Item -LiteralPath (Join-Path $package 'reach-prototype.cfg') -Destination (Join-Path $mod 'reach-prototype.cfg')
-Set-Content -LiteralPath (Join-Path $mod 'autoexec.cfg') -Value 'exec reach-prototype.cfg' -Encoding ASCII
+Copy-Item -LiteralPath (Join-Path $package 'reach_prototype.cfg') -Destination (Join-Path $mod 'reach_prototype.cfg')
+Set-Content -LiteralPath (Join-Path $mod 'autoexec.cfg') -Value 'exec reach_prototype.cfg' -Encoding ASCII
 $startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $profile +
-    '" +set fs_game reach_lab +set com_allowConsole 1 +set r_fullscreen 0 +set com_skipIntroVideos 1 +set logFile 2 +set g_reachCombat 1 +exec reach-prototype.cfg'
+    '" +set fs_game reach_lab +set com_allowConsole 1 +set r_fullscreen 0 +set com_skipIntroVideos 1 +set logFile 2 +set g_reachCombat 1 +set g_reachLabAutoConfig 1 +exec reach_prototype.cfg'
 [ordered]@{ binary = $binary; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'launch-plan.json') -Encoding UTF8
 Write-Host "Playtest session: $session"

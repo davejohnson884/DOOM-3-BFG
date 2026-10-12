@@ -1828,8 +1828,10 @@ void idWeapon::EndAttack() {
 idWeapon::isReady
 ================
 */
-bool idWeapon::IsReady() const {
-	return !hide && !IsHidden() && ( ( status == WP_RELOAD ) || ( status == WP_READY ) || ( status == WP_OUTOFAMMO ) );
+bool idWeapon::IsReady( bool allowLowered ) const {
+	// LowerWeapon only offsets the viewmodel. Reach sprint/quick actions need
+	// readiness while applying that offset; all stock callers keep the default.
+	return ( allowLowered || !hide ) && !IsHidden() && ( ( status == WP_RELOAD ) || ( status == WP_READY ) || ( status == WP_OUTOFAMMO ) );
 }
 
 /*

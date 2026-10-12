@@ -10,7 +10,7 @@ on:
       - 'tools/reach/test-*.ps1'
       - 'tools/reach/start-playtest.ps1'
       - 'tools/reach/Start-Reach-playtest.cmd'
-      - 'tools/reach/reach-prototype.cfg'
+      - 'tools/reach/reach_prototype.cfg'
   workflow_dispatch:
 
 permissions:
