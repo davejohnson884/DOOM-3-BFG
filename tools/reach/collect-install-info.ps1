@@ -2,19 +2,30 @@
 param(
     [string]$BfgPath = 'C:\Program Files (x86)\Steam\steamapps\common\DOOM 3 BFG Edition',
     [string]$MccPath = 'D:\SteamLibrary\steamapps\common\Halo The Master Chief Collection',
-    [string]$OutputDirectory = $PSScriptRoot
+    [string]$OutputDirectory = ''
 )
 $ErrorActionPreference = 'Stop'
+trap {
+    Write-Host "Collection error at line $($_.InvocationInfo.ScriptLineNumber): $($_.Exception.Message)"
+    Write-Host $_.InvocationInfo.PositionMessage
+    exit 1
+}
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    $OutputDirectory = $PSScriptRoot
+    if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+        $OutputDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
+    }
+}
 $report = [ordered]@{ collectedUtc = [DateTime]::UtcNow.ToString('o'); games = @() }
 foreach ($game in @(
     @{ name = 'Doom 3 BFG'; path = $BfgPath; scan = 'base'; extensions = @('.resources', '.cfg', '.exe') },
     @{ name = 'MCC Reach'; path = $MccPath; scan = 'haloreach'; extensions = @('.map', '.fsb', '.info', '.dll') }
 )) {
-    if (-not (Test-Path -LiteralPath $game.path -PathType Container)) {
+    if (-not (Test-Path -LiteralPath $game['path'] -PathType Container)) {
         throw "Install folder not found: $($game.path)"
     }
-    $root = (Resolve-Path -LiteralPath $game.path).Path.TrimEnd('\')
-    $scan = Join-Path $root $game.scan
+    $root = (Resolve-Path -LiteralPath $game['path']).Path.TrimEnd('\')
+    $scan = Join-Path $root $game['scan']
     if (-not (Test-Path -LiteralPath $scan -PathType Container)) {
         throw "Required game data folder not found: $scan. Check that Reach is installed in MCC."
     }
