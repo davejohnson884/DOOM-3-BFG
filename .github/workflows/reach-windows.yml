@@ -56,7 +56,7 @@ jobs:
         run: |
           function Check-ConverterStep([string]$label) {
             if ($LASTEXITCODE -ne 0) {
-              Get-Content build/converter-step.log | Select-Object -Last 18 | ForEach-Object { Write-Host "::error title=${label}::$_" }
+              Get-Content build/converter-step.log | Select-Object -Last 8 | ForEach-Object { Write-Host "::error title=${label}::$_" }
               exit 1
             }
           }
@@ -64,7 +64,8 @@ jobs:
           Check-ConverterStep 'Converter dependencies'
           python tools/reach/assets/test_conversion.py 2>&1 | Tee-Object build/converter-step.log
           Check-ConverterStep 'Converter tests'
-          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachAssetConvert --paths tools/reach/assets --add-data "tools/reach/assets/reach_ar.script:." --distpath build/reach-playtest --workpath build/asset-pyinstaller --specpath build tools/reach/assets/convert_reach.py 2>&1 | Tee-Object build/converter-step.log
+          $scriptTemplate = (Resolve-Path tools/reach/assets/reach_ar.script).Path
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachAssetConvert --paths tools/reach/assets --add-data "${scriptTemplate}:." --distpath build/reach-playtest --workpath build/asset-pyinstaller --specpath build tools/reach/assets/convert_reach.py 2>&1 | Tee-Object build/converter-step.log
           Check-ConverterStep 'Converter packaging'
           & build/reach-playtest/ReachAssetConvert.exe --help 2>&1 | Tee-Object build/converter-step.log
           Check-ConverterStep 'Converter runtime'
