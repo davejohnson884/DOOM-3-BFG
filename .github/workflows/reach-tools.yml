@@ -79,3 +79,12 @@ jobs:
           path: |
             tools/reach/Fix-Reach-rifle-script.cmd
             tools/reach/fix-rifle-script.ps1
+      - name: Upload isolated stock rifle launcher
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-rifle-launcher-fix
+          path: |
+            tools/reach/start-playtest.ps1
+            tools/reach/Start-Reach-rifle-stock.cmd
+            tools/reach/Start-Reach-rifle-stock-diagnostics.cmd
+            tools/reach/reach_prototype.cfg

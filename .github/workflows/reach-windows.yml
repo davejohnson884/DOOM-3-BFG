@@ -69,7 +69,7 @@ jobs:
           Check-ConverterStep 'Converter packaging'
           & build/reach-playtest/ReachAssetConvert.exe --help 2>&1 | Tee-Object build/converter-step.log
           Check-ConverterStep 'Converter runtime'
-          Copy-Item tools/reach/Build-Reach-rifle.cmd, tools/reach/Start-Reach-rifle.cmd, tools/reach/Start-Reach-rifle-stock.cmd, tools/reach/Fix-Reach-rifle-script.cmd, tools/reach/fix-rifle-script.ps1, tools/reach/assets/RIFLE.md build/reach-playtest/
+          Copy-Item tools/reach/Build-Reach-rifle.cmd, tools/reach/Start-Reach-rifle.cmd, tools/reach/Start-Reach-rifle-stock.cmd, tools/reach/Start-Reach-rifle-stock-diagnostics.cmd, tools/reach/Fix-Reach-rifle-script.cmd, tools/reach/fix-rifle-script.ps1, tools/reach/assets/RIFLE.md build/reach-playtest/
           New-Item -ItemType Directory build/reach-playtest/licenses -Force | Out-Null
           Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-playtest/licenses/Reclaimer.txt
           Copy-Item tools/reach/assets/rmf_reader/UPSTREAM.md build/reach-playtest/licenses/Reclaimer-source.md

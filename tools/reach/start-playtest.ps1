@@ -67,24 +67,27 @@ public static class ReachSavedGames {
 '@
     $SavedGamesDirectory = [ReachSavedGames]::Resolve()
 }
-$displayArguments = '+set r_fullscreen 0 +set r_windowWidth 1280 +set r_windowHeight 720'
-if (-not $Windowed) {
-    # Match the DPI-aware game executable when measuring the desktop.
-    Add-Type @'
+# Use the primary desktop for explicit windowed/fallback launches.
+# Match the DPI-aware game executable when measuring the desktop.
+Add-Type @'
 using System.Runtime.InteropServices;
 public static class ReachDesktop {
     [DllImport("user32.dll")]
     public static extern bool SetProcessDPIAware();
 }
 '@
-    [ReachDesktop]::SetProcessDPIAware() | Out-Null
-    Add-Type -AssemblyName System.Windows.Forms
-    $screen = [System.Windows.Forms.Screen]::PrimaryScreen
-    if ($null -eq $screen) { throw 'No primary display was found. Try the launcher with -Windowed.' }
-    $bounds = $screen.Bounds
+[ReachDesktop]::SetProcessDPIAware() | Out-Null
+Add-Type -AssemblyName System.Windows.Forms
+$screen = [System.Windows.Forms.Screen]::PrimaryScreen
+if ($null -eq $screen) { throw 'No primary display was found. Try the launcher with -Windowed.' }
+$bounds = $screen.Bounds
+if ($Windowed) {
+    $windowX = $screen.WorkingArea.X + [Math]::Max(0, [int](($screen.WorkingArea.Width - 1280) / 2))
+    $windowY = $screen.WorkingArea.Y + [Math]::Max(0, [int](($screen.WorkingArea.Height - 720) / 2))
+    $displayArguments = '+set r_fullscreen 0 +set r_windowWidth 1280 +set r_windowHeight 720 +set r_windowX ' + $windowX + ' +set r_windowY ' + $windowY
+} else {
     $displayArguments = '+set r_fullscreen -1 +set r_windowX ' + $bounds.X + ' +set r_windowY ' + $bounds.Y +
         ' +set r_windowWidth ' + $bounds.Width + ' +set r_windowHeight ' + $bounds.Height
-    Write-Host "Display: borderless fullscreen, $($bounds.Width) x $($bounds.Height)"
 }
 $logMode = if ($FlushLog) { 2 } else { 1 }
 if ($RetailRifle -and -not $Diagnostics) { $logMode = 0 }
@@ -93,6 +96,33 @@ $profile = Join-Path $session 'profile'
 $mod = Join-Path $profile 'reach_lab'
 $consoleLog = Join-Path $session 'qconsole.log'
 New-Item -ItemType Directory -Path $mod -Force | Out-Null
+$dataRoot = $install
+if ($RetailRifle) {
+    # Loose-file priority is needed for the rifle, but must not expose another
+    # port's loose base shaders/fonts or its old install/reach_lab shader cache.
+    # A fresh data root contains only links to packaged data/video/WAD files.
+    $dataRoot = Join-Path $session 'stock-data'
+    $allowedControlConfigs = @('default.cfg', 'joy_360_0.cfg', 'joy_360_1.cfg', 'joy_lefty.cfg', 'joy_righty.cfg')
+    foreach ($gameDirectory in @('base', 'd3xp', 'd3le')) {
+        $sourceRoot = Join-Path $install $gameDirectory
+        if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) { continue }
+        foreach ($file in @(Get-ChildItem -LiteralPath $sourceRoot -File -Recurse)) {
+            $relative = $file.FullName.Substring($sourceRoot.Length + 1)
+            $packaged = $file.Extension -in @('.resources', '.wad', '.bik', '.roq')
+            $controlConfig = $gameDirectory -eq 'base' -and $relative -in $allowedControlConfigs
+            if (-not $packaged -and -not $controlConfig) { continue }
+            $destination = Join-Path (Join-Path $dataRoot $gameDirectory) $relative
+            New-Item -ItemType Directory -Path (Split-Path $destination -Parent) -Force | Out-Null
+            try {
+                New-Item -ItemType HardLink -Path $destination -Target $file.FullName -ErrorAction Stop | Out-Null
+            } catch {
+                throw ('Cannot create the isolated stock-data links. Keep the launcher folder on the same NTFS drive as the Steam BFG install (C: on your PC). Details: ' + $_.Exception.Message)
+            }
+        }
+    }
+    Write-Host 'Steam packaged data linked into a clean lab; loose shaders/fonts and previous port caches are excluded.'
+}
+$copiedStockConfig = $false
 # The original save/profile tree is copied, never modified or used by the lab.
 $originalProfile = Join-Path $SavedGamesDirectory 'id Software/DOOM 3 BFG'
 if (Test-Path -LiteralPath $originalProfile -PathType Container) {
@@ -104,6 +134,8 @@ if (Test-Path -LiteralPath $originalProfile -PathType Container) {
         if (Test-Path -LiteralPath $stockConfig) {
             New-Item -ItemType Directory -Path (Join-Path $profile 'base') -Force | Out-Null
             Copy-Item -LiteralPath $stockConfig -Destination (Join-Path $profile 'base/D3BFGConfig.cfg')
+            Copy-Item -LiteralPath $stockConfig -Destination (Join-Path $mod 'D3BFGConfig.cfg')
+            $copiedStockConfig = $true
         }
     }
 }
@@ -132,7 +164,7 @@ $config = @('echo "[ReachDiag] binary ' + $binaryHash.Substring(0, 12) + ' ' + $
 if ($RetailRifle) {
     $config += 'bind SHIFT _speed'
     $combatArguments = ''
-    if (-not $Windowed) { $displayArguments = '' }
+    if (-not $Windowed -and $copiedStockConfig) { $displayArguments = '' }
 } elseif ($StockCombat) {
     $config += 'set g_reachCombat 0'
     $combatArguments = '+set g_reachCombat 0 +set g_reachLabAutoConfig 0'
@@ -146,7 +178,7 @@ $threadArguments = if ($SingleThreaded) {
     '+set com_smp 0 +set jobs_numThreads 0 +set r_useParallelAddModels 0 +set r_useParallelAddLights 0 +set r_useParallelAddShadows 0'
 } else { '' }
 $diagnosticMode = if ($Diagnostics) { 1 } else { 0 }
-$startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $profile +
+$startArguments = '+set fs_basepath "' + $dataRoot + '" +set fs_savepath "' + $profile +
     '" +set fs_game reach_lab +set com_allowConsole 1 ' + $displayArguments +
     ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set logFileName "' + $consoleLog + '" +set com_timestampPrints 1' +
     ' +set com_reachDiagnostics ' + $diagnosticMode + ' ' + $threadArguments + ' ' + $combatArguments
@@ -155,10 +187,10 @@ if ($ReachRifle) { $startArguments += ' +set fs_resourceLoadPriority 0' }
 if ([regex]::Matches($startArguments, '"[^"]*"|\S+').Count -gt 64) {
     throw 'The launch arguments exceed the engine parser limit. Move optional settings into a config file.'
 }
-[ordered]@{ binary = $binary; binarySha256 = $binaryHash; mode = $mode; threading = $threadMode; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
+[ordered]@{ binary = $binary; binarySha256 = $binaryHash; mode = $mode; threading = $threadMode; install = $install; data = $dataRoot; profile = $profile; originalProfile = $originalProfile; copiedStockConfig = $copiedStockConfig; arguments = $startArguments } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'launch-plan.json') -Encoding UTF8
 Write-Host "Playtest session: $session"
-Write-Host 'The game uses a new lab profile and reads BFG data from Steam. Existing executables and profiles are preserved.'
+Write-Host 'The game uses a new lab profile and Steam packaged data. Existing executables and profiles are preserved.'
 if ($PrepareOnly) { Write-Host 'Prepared only; no game was launched.'; return }
 if ($Diagnostics) {
     try {
