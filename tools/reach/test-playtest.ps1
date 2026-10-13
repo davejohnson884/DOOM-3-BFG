@@ -26,6 +26,7 @@ if ($plan.arguments -notmatch '\+set r_fullscreen -1\b' -or
     $plan.arguments -notmatch '\+set r_windowWidth ([1-9][0-9]*)\b' -or
     $plan.arguments -notmatch '\+set r_windowHeight ([1-9][0-9]*)\b' -or
     $plan.arguments -notmatch '\+set logFile 1\b' -or
+    $plan.arguments -notmatch '\+set logFileName "[^"\r\n]+qconsole\.log"' -or
     $plan.arguments -notmatch '\+set com_timestampPrints 1\b') {
     throw 'Normal playtests must cover the desktop and use timestamped, buffered logging.'
 }
@@ -89,7 +90,12 @@ public static class ReachLaunchFixture {
         int index = Array.IndexOf(args, "fs_savepath");
         if (index < 0) { return 4; }
         string mod = Path.Combine(args[index + 1], "reach_lab");
-        File.WriteAllText(Path.Combine(mod, "qconsole.log"), "fixture diagnostic log");
+        int logIndex = Array.IndexOf(args, "logFileName");
+        if (logIndex < 0) { return 5; }
+        File.WriteAllText(args[logIndex + 1], "fixture explicit diagnostic log");
+        string baseFolder = Path.Combine(args[index + 1], "base");
+        Directory.CreateDirectory(baseFolder);
+        File.WriteAllText(Path.Combine(baseFolder, "qconsole.log"), "fixture fallback diagnostic log");
         Thread.Sleep(2500);
         return 3;
     }
@@ -109,11 +115,11 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::OpenRead($zips[0].FullName)
 try {
     $names = @($archive.Entries | ForEach-Object { $_.FullName })
-    foreach ($required in @('qconsole.log', 'process-health.jsonl', 'exit-report.json', 'launch-plan.json')) {
+    foreach ($required in @('qconsole.log', 'qconsole-1.log', 'console-log-index.json', 'process-health.jsonl', 'exit-report.json', 'launch-plan.json')) {
         if ($names -notcontains $required) { throw "Diagnostic ZIP is missing $required." }
     }
     foreach ($name in $names) {
-        if ($name -notin @('qconsole.log', 'process-health.jsonl', 'exit-report.json', 'launch-plan.json', 'hardware.json')) {
+        if ($name -notin @('qconsole.log', 'qconsole-1.log', 'console-log-index.json', 'process-health.jsonl', 'exit-report.json', 'launch-plan.json', 'hardware.json')) {
             throw "Unexpected/private content in diagnostic ZIP: $name"
         }
     }

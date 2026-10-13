@@ -1461,7 +1461,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	const HCURSOR hcurSave = ::SetCursor( LoadCursor( 0, IDC_WAIT ) );
 
-	Sys_SetPhysicalWorkMemory( 192 << 20, 1024 << 20 );
+	// Let Windows manage the working set instead of applying legacy size hints.
 
 	Sys_GetCurrentMemoryStatus( exeLaunchMemoryStats );
 

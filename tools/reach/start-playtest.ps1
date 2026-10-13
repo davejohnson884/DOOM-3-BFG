@@ -79,6 +79,7 @@ $logMode = if ($FlushLog) { 2 } else { 1 }
 $session = Join-Path $package ('playtest-' + [Guid]::NewGuid().ToString('N'))
 $profile = Join-Path $session 'profile'
 $mod = Join-Path $profile 'reach_lab'
+$consoleLog = Join-Path $session 'qconsole.log'
 New-Item -ItemType Directory -Path $mod -Force | Out-Null
 # The original save/profile tree is copied, never modified or used by the lab.
 $originalProfile = Join-Path $SavedGamesDirectory 'id Software/DOOM 3 BFG'
@@ -105,7 +106,7 @@ $threadArguments = if ($SingleThreaded) {
 $diagnosticMode = if ($Diagnostics) { 1 } else { 0 }
 $startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $profile +
     '" +set fs_game reach_lab +set com_allowConsole 1 ' + $displayArguments +
-    ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set com_timestampPrints 1' +
+    ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set logFileName "' + $consoleLog + '" +set com_timestampPrints 1' +
     ' +set com_reachDiagnostics ' + $diagnosticMode + ' ' + $threadArguments + ' ' + $combatArguments
 [ordered]@{ binary = $binary; binarySha256 = $binaryHash; mode = $mode; threading = $threadMode; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'launch-plan.json') -Encoding UTF8
@@ -118,6 +119,7 @@ if ($Diagnostics) {
             windows = [Environment]::OSVersion.VersionString
             processors = @(Get-CimInstance Win32_Processor -OperationTimeoutSec 5 | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors)
             graphics = @(Get-CimInstance Win32_VideoController -OperationTimeoutSec 5 | Select-Object Name, DriverVersion)
+            memory = @(Get-CimInstance Win32_OperatingSystem -OperationTimeoutSec 5 | Select-Object TotalVisibleMemorySize, FreePhysicalMemory)
         } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $session 'hardware.json') -Encoding UTF8
     } catch { Write-Host "Hardware information unavailable: $($_.Exception.Message)" }
 }
@@ -153,10 +155,20 @@ if ($Diagnostics) {
         $source = Join-Path $session $name
         if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $report }
     }
-    $consoleLog = Join-Path $mod 'qconsole.log'
-    if (Test-Path -LiteralPath $consoleLog) { Copy-Item -LiteralPath $consoleLog -Destination $report }
+    $consoleSources = @()
+    if (Test-Path -LiteralPath $consoleLog) { $consoleSources += Get-Item -LiteralPath $consoleLog }
+    # Older/default configs can place the log under base or an expansion folder.
+    $consoleSources += @(Get-ChildItem -LiteralPath $profile -Filter 'qconsole.log' -File -Recurse)
+    $consoleIndex = @()
+    for ($i = 0; $i -lt $consoleSources.Count; $i++) {
+        $name = if ($i -eq 0) { 'qconsole.log' } else { "qconsole-$i.log" }
+        Copy-Item -LiteralPath $consoleSources[$i].FullName -Destination (Join-Path $report $name)
+        $consoleIndex += [ordered]@{ reportName = $name; source = $consoleSources[$i].FullName }
+    }
+    ConvertTo-Json -InputObject $consoleIndex | Set-Content (Join-Path $report 'console-log-index.json') -Encoding UTF8
+    if ($consoleSources.Count -eq 0) { Write-Host 'WARNING: No console log was found. The ZIP will contain process/exit information only.' }
     $zip = Join-Path $package ('reach-diagnostics-' + (Split-Path $session -Leaf) + '.zip')
     Compress-Archive -Path (Join-Path $report '*') -DestinationPath $zip
     Write-Host "Send this diagnostic ZIP: $zip"
 }
-Write-Host "For troubleshooting, attach qconsole.log from $mod. Do not upload your backup or saves."
+Write-Host "Console log: $consoleLog. Do not upload your backup or saves."
