@@ -50,8 +50,11 @@ jobs:
       - name: Validate serializers and native runtime
         shell: pwsh
         run: |
-          & build/reach-asset-tools/ReachAssetExport.exe --selftest
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/reach-asset-tools/ReachAssetExport.exe --selftest 2>&1 | Tee-Object build/reach-assets-runtime.log
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content build/reach-assets-runtime.log | Select-Object -First 15 | ForEach-Object { Write-Host "::error title=Asset tool runtime::$_" }
+            exit 1
+          }
       - name: Upload collection tool
         uses: actions/upload-artifact@v4
         with:
@@ -63,4 +66,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reach-assets-build-log
-          path: build/reach-assets-build.log
+          path: |
+            build/reach-assets-build.log
+            build/reach-assets-runtime.log

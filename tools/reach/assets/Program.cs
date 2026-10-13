@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -95,7 +96,8 @@ internal static class Program
         var normalized = name.Replace('\\', '/');
         if (normalized.StartsWith('/') || normalized.Contains(':') || normalized.Split('/').Any(p => p is ".." or ".") || normalized.Any(char.IsControl))
             throw new InvalidDataException("Unsafe asset name.");
-        return string.Join('_', normalized.Split('/').Select(p => string.Concat(p.Select(c => char.IsLetterOrDigit(c) || c is '_' or '-' ? c : '_'))));
+        var result = string.Join('_', normalized.Split('/').Select(p => string.Concat(p.Select(c => char.IsLetterOrDigit(c) || c is '_' or '-' ? c : '_'))));
+        return result.Length <= 120 ? result : result[..100] + "_" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(name)))[..16];
     }
     static void SaveJson(string path, object value) { Directory.CreateDirectory(Path.GetDirectoryName(path)!); File.WriteAllText(path, JsonConvert.SerializeObject(value, Formatting.Indented, JsonSettings)); }
     static void Attempt(string label, Action action) { try { action(); } catch (Exception ex) { Errors.Add(label + ": " + ex.Message); Console.WriteLine("Recorded issue: " + label + ": " + ex.Message); } }
@@ -264,7 +266,8 @@ internal static class Program
                     Check(sound.GetDefaults(out var frequency, out _));
                     Check(sound.SeekData(0));
                     var pcm = new byte[length];
-                    Check(sound.ReadData(pcm, length, out var read));
+                    var result = sound.ReadData(pcm, length, out var read);
+                    if (result != FMOD_RESULT.OK && result != FMOD_RESULT.ERR_FILE_EOF) Check(result);
                     if (read != length) throw new InvalidDataException("Incomplete decoded PCM sample.");
                     var name = item.Index.ToString("D5") + "_" + SafeName(item.Name) + ".wav";
                     var directory = Path.Combine(bundle, "sounds");

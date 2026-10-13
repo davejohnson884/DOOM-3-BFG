@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using System.IO;
 using Reclaimer.Blam.Common;
 using Reclaimer.Blam.MccHaloReach;
 
