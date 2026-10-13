@@ -2332,6 +2332,12 @@ void idActor::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &dir
 				}
 			}
 
+			if ( cvarSystem->GetCVarBool( "com_reachDiagnostics" ) ) {
+				gameLocal.Printf( "[ReachDiag] death entity=%s def=%s damage=%s health=%d gibEligible=%d blood=%d burnDelay=%.2f\n",
+					name.c_str(), GetEntityDefName(), damageDefName, health,
+					( health < -20 ) && spawnArgs.GetBool( "gib" ) && damageDef->GetBool( "gib" ),
+					g_bloodEffects.GetBool(), spawnArgs.GetFloat( "burnaway" ) );
+			}
 			Killed( inflictor, attacker, damage, dir, location );
 			if ( ( health < -20 ) && spawnArgs.GetBool( "gib" ) && damageDef->GetBool( "gib" ) ) {
 				Gib( dir, damageDefName );

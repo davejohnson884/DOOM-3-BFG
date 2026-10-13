@@ -22,6 +22,8 @@ The follow-up log confirms the desktop build starts at 3440 x 1440 with NVIDIA O
 
 The compiled stock-combat baseline also stutters/freezes. Its first report recorded normal exit and responsive process samples near 1 GB of private memory, with a sharp resident-memory drop after loading. The source explicitly emptied the Windows working set at map-load completion; that call and the legacy startup residency-size hints are now removed to avoid refaulting freshly loaded pages. The launcher now uses an explicit console log path and collects fallback profile logs, because the baseline report omitted qconsole.log. Freeze diagnosis remains pending those frame logs and the single-threaded comparison.
 
+The owner subsequently reports the single-threaded Reach diagnostic plays normally. The normal playtest CMD now uses the same scheduling settings. Monster death/gib/blood rules are unchanged; opt-in diagnostic death logging helps check reported disappearing bodies against the stock game. The project's host target is stock BFG gameplay/visual parity with Reach weapons and their intended controls, without unrelated gore, AI, HUD or rendering changes. Reach models and animations still require local donor conversion.
+
 The modern compiler adapter keeps the original warning level and diagnostics, but does not promote legacy warnings to errors. The original source predates MSVC warnings about member shadowing, specialization storage classes and inline allocation operators. Actual compiler/linker errors still fail the workflow, and the isolated sprint tests use warnings as errors. Source compatibility changes retain the VS2010 annotation path and use SAL on modern MSVC.
 
 ## Runtime and assets
