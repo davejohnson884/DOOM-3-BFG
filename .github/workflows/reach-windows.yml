@@ -54,14 +54,20 @@ jobs:
       - name: Build and validate standalone asset converter
         shell: pwsh
         run: |
-          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tools/reach/assets/test_conversion.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachAssetConvert --paths tools/reach/assets --add-data "tools/reach/assets/reach_ar.script:." --distpath build/reach-playtest --workpath build/asset-pyinstaller --specpath build tools/reach/assets/convert_reach.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & build/reach-playtest/ReachAssetConvert.exe --help
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          function Check-ConverterStep([string]$label) {
+            if ($LASTEXITCODE -ne 0) {
+              Get-Content build/converter-step.log | Select-Object -Last 18 | ForEach-Object { Write-Host "::error title=${label}::$_" }
+              exit 1
+            }
+          }
+          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0 2>&1 | Tee-Object build/converter-step.log
+          Check-ConverterStep 'Converter dependencies'
+          python tools/reach/assets/test_conversion.py 2>&1 | Tee-Object build/converter-step.log
+          Check-ConverterStep 'Converter tests'
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachAssetConvert --paths tools/reach/assets --add-data "tools/reach/assets/reach_ar.script:." --distpath build/reach-playtest --workpath build/asset-pyinstaller --specpath build tools/reach/assets/convert_reach.py 2>&1 | Tee-Object build/converter-step.log
+          Check-ConverterStep 'Converter packaging'
+          & build/reach-playtest/ReachAssetConvert.exe --help 2>&1 | Tee-Object build/converter-step.log
+          Check-ConverterStep 'Converter runtime'
           Copy-Item tools/reach/Build-Reach-rifle.cmd, tools/reach/Start-Reach-rifle.cmd, tools/reach/Start-Reach-rifle-stock.cmd, tools/reach/assets/RIFLE.md build/reach-playtest/
           New-Item -ItemType Directory build/reach-playtest/licenses -Force | Out-Null
           Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-playtest/licenses/Reclaimer.txt
@@ -76,6 +82,7 @@ jobs:
           path: |
             build/reach-build.log
             build/reach-build.binlog
+            build/converter-step.log
           if-no-files-found: warn
       - name: Upload executable
         uses: actions/upload-artifact@v4
