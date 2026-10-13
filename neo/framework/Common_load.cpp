@@ -633,8 +633,7 @@ void idCommonLocal::ExecuteMapChange() {
 	// remove any prints from the notify lines
 	console->ClearNotifyLines();
 
-	// Keep the pages just touched during loading resident. Passing (-1, -1)
-	// empties the working set on Windows and forces gameplay to page them in again.
+	Sys_SetPhysicalWorkMemory( -1, -1 );
 
 	// at this point we should be done with the loading gui so we kill it
 	delete loadGUI;
