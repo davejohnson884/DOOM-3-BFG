@@ -40,6 +40,9 @@ class PackageChecks(unittest.TestCase):
                     self.assertNotIn(b'getReachPose', inner.read('script/weapon_machinegun.script'))
                     self.assertEqual(inner.read('models/md5/weapons/reach_ar/view.md5mesh'), b'unchanged mesh fixture')
                     self.assertIn(b'"def_melee" "damage_reach_ar_melee"', inner.read('def/weapon_machinegun.def'))
+                    smoke = re.search(r'"smoke_muzzle"\s+"([^"]+)"', inner.read('def/weapon_machinegun.def').decode())[1]
+                    particle_name = re.search(r'particle\s+(\S+)', inner.read('particles/reach_ar_flash.prt').decode())[1]
+                    self.assertEqual(smoke, particle_name, 'Native particle lookup uses the exact declaration name, including .prt')
                     config = inner.read('autoexec.cfg')
                     self.assertNotRegex(config.decode(), r'(r_fullscreen|r_window|com_smp|jobs_numThreads|r_useParallel|fs_basepath|fs_savepath|fs_resourceLoadPriority)')
             self.assertEqual(before, {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in before})

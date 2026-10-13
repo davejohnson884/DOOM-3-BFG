@@ -64,7 +64,7 @@ def effect_material():
 '''
 
 
-PARTICLE = '''particle reach_ar_flash {
+PARTICLE = '''particle reach_ar_flash.prt {
     {
         count 1
         material reach/ar_flash
