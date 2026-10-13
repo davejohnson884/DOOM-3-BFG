@@ -18,6 +18,8 @@ The workflow keeps the SDK installation out of the checkout, verifies the SDK in
 
 The owner reports sprint, melee and grenade controls working after the readiness fix, but also reports freezes and a small window. The playtest launcher now defaults to borderless fullscreen at the primary desktop resolution and timestamped logging in mode 1. The engine's logging mode 1 now avoids a disk flush per print, as its documented behavior requires; mode 2 retains those diagnostic flushes. Runtime freeze diagnosis still requires a current log and whether the pauses recover or require closing the game.
 
+The follow-up log confirms the desktop build starts at 3440 x 1440 with NVIDIA OpenGL 4.6. It records an 18-second level load and ends after `godmode ON`, without a fatal exception. The owner confirms Steam's original BFG is smooth. `Start-Stock-baseline.cmd` compares the compiled executable with Reach disabled; `Start-Reach-diagnostic.cmd` compares Reach with game/draw and renderer jobs run on the main thread. Opt-in frame progress logs, process/exit reports and whitelisted diagnostic ZIPs provide evidence for the next diagnosis. Neither comparison mode establishes a stability fix until tested on the owner's PC.
+
 The modern compiler adapter keeps the original warning level and diagnostics, but does not promote legacy warnings to errors. The original source predates MSVC warnings about member shadowing, specialization storage classes and inline allocation operators. Actual compiler/linker errors still fail the workflow, and the isolated sprint tests use warnings as errors. Source compatibility changes retain the VS2010 annotation path and use SAL on modern MSVC.
 
 ## Runtime and assets

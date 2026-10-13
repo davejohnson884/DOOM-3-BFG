@@ -4,6 +4,9 @@ param(
     [string]$SavedGamesDirectory = '',
     [switch]$Windowed,
     [switch]$FlushLog,
+    [switch]$SingleThreaded,
+    [switch]$StockCombat,
+    [switch]$Diagnostics,
     [switch]$PrepareOnly
 )
 $ErrorActionPreference = 'Stop'
@@ -18,7 +21,8 @@ if (-not (Test-Path -LiteralPath $binary) -or -not (Test-Path -LiteralPath $hash
     throw 'Extract the complete reach-bfg-win32 artifact before running this launcher.'
 }
 $expected = Get-Content -LiteralPath $hashFile -Raw | ConvertFrom-Json
-if ((Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash -ine $expected.sha256) {
+$binaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
+if ($binaryHash -ine $expected.sha256) {
     throw 'The executable does not match this build package. Download and extract the artifact again.'
 }
 $install = (Resolve-Path -LiteralPath $BfgPath).Path.TrimEnd('\')
@@ -84,17 +88,75 @@ if (Test-Path -LiteralPath $originalProfile -PathType Container) {
     Write-Host "Original profile snapshot: $backup"
 }
 Copy-Item -LiteralPath (Join-Path $package 'reach_prototype.cfg') -Destination (Join-Path $mod 'reach_prototype.cfg')
-Set-Content -LiteralPath (Join-Path $mod 'autoexec.cfg') -Value 'exec reach_prototype.cfg' -Encoding ASCII
+$mode = if ($StockCombat) { 'stock-combat' } else { 'reach-combat' }
+$threadMode = if ($SingleThreaded) { 'single-threaded' } else { 'normal-threading' }
+$config = @('echo "[ReachDiag] binary ' + $binaryHash.Substring(0, 12) + ' ' + $mode + ' ' + $threadMode + '"')
+if ($StockCombat) {
+    $config += 'set g_reachCombat 0'
+    $combatArguments = '+set g_reachCombat 0 +set g_reachLabAutoConfig 0'
+} else {
+    $config += 'exec reach_prototype.cfg'
+    $combatArguments = '+set g_reachCombat 1 +set g_reachLabAutoConfig 1 +exec reach_prototype.cfg'
+}
+Set-Content -LiteralPath (Join-Path $mod 'autoexec.cfg') -Value $config -Encoding ASCII
+$threadArguments = if ($SingleThreaded) {
+    '+set com_smp 0 +set jobs_numThreads 0 +set r_useParallelAddModels 0 +set r_useParallelAddLights 0 +set r_useParallelAddShadows 0'
+} else { '' }
+$diagnosticMode = if ($Diagnostics) { 1 } else { 0 }
 $startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $profile +
     '" +set fs_game reach_lab +set com_allowConsole 1 ' + $displayArguments +
     ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set com_timestampPrints 1' +
-    ' +set g_reachCombat 1 +set g_reachLabAutoConfig 1 +exec reach_prototype.cfg'
-[ordered]@{ binary = $binary; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
+    ' +set com_reachDiagnostics ' + $diagnosticMode + ' ' + $threadArguments + ' ' + $combatArguments
+[ordered]@{ binary = $binary; binarySha256 = $binaryHash; mode = $mode; threading = $threadMode; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'launch-plan.json') -Encoding UTF8
 Write-Host "Playtest session: $session"
 Write-Host 'The game uses a new lab profile and reads BFG data from Steam. Existing executables and profiles are preserved.'
 if ($PrepareOnly) { Write-Host 'Prepared only; no game was launched.'; return }
+if ($Diagnostics) {
+    try {
+        [ordered]@{
+            windows = [Environment]::OSVersion.VersionString
+            processors = @(Get-CimInstance Win32_Processor -OperationTimeoutSec 5 | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors)
+            graphics = @(Get-CimInstance Win32_VideoController -OperationTimeoutSec 5 | Select-Object Name, DriverVersion)
+        } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $session 'hardware.json') -Encoding UTF8
+    } catch { Write-Host "Hardware information unavailable: $($_.Exception.Message)" }
+}
+$launchTime = Get-Date
 $process = Start-Process -FilePath $binary -WorkingDirectory $package -ArgumentList $startArguments -PassThru
-$process.WaitForExit()
-Write-Host "Game exit code: $($process.ExitCode)"
+$process.Handle | Out-Null
+if ($Diagnostics) {
+    while (-not $process.WaitForExit(2000)) {
+        try {
+            $process.Refresh()
+            [ordered]@{ elapsedSeconds = [Math]::Round(((Get-Date) - $launchTime).TotalSeconds, 1); privateBytes = $process.PrivateMemorySize64; workingSetBytes = $process.WorkingSet64; responding = $process.Responding } |
+                ConvertTo-Json -Compress | Add-Content (Join-Path $session 'process-health.jsonl') -Encoding UTF8
+        } catch { Write-Host "Process sample unavailable: $($_.Exception.Message)" }
+    }
+} else { $process.WaitForExit() }
+$exitCode = $process.ExitCode
+$exitHex = '0x{0:X8}' -f [BitConverter]::ToUInt32([BitConverter]::GetBytes([int]$exitCode), 0)
+$events = @()
+if ($Diagnostics -and $exitCode -ne 0) {
+    try {
+        $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Id = 1000, 1001; StartTime = $launchTime } -ErrorAction Stop |
+            Where-Object { $_.Message -match 'Doom3BFG\.exe' } | Select-Object -First 3 TimeCreated, Id, Message)
+    } catch { Write-Host 'No matching Windows crash event was available at exit.' }
+}
+[ordered]@{ exitCode = $exitCode; exitCodeHex = $exitHex; elapsedSeconds = ((Get-Date) - $launchTime).TotalSeconds; events = $events } |
+    ConvertTo-Json -Depth 5 | Set-Content (Join-Path $session 'exit-report.json') -Encoding UTF8
+Write-Host "Game exit code: $exitCode ($exitHex)"
+if ($Diagnostics) {
+    # Include only diagnostics, never the backup, saves or installed game data.
+    $report = Join-Path $session 'diagnostics'
+    New-Item -ItemType Directory -Path $report | Out-Null
+    foreach ($name in @('launch-plan.json', 'hardware.json', 'process-health.jsonl', 'exit-report.json')) {
+        $source = Join-Path $session $name
+        if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $report }
+    }
+    $consoleLog = Join-Path $mod 'qconsole.log'
+    if (Test-Path -LiteralPath $consoleLog) { Copy-Item -LiteralPath $consoleLog -Destination $report }
+    $zip = Join-Path $package ('reach-diagnostics-' + (Split-Path $session -Leaf) + '.zip')
+    Compress-Archive -Path (Join-Path $report '*') -DestinationPath $zip
+    Write-Host "Send this diagnostic ZIP: $zip"
+}
 Write-Host "For troubleshooting, attach qconsole.log from $mod. Do not upload your backup or saves."

@@ -13,7 +13,7 @@ on:
       - 'tools/reach/test-sprint.cpp'
       - 'tools/reach/test-actions.cpp'
       - 'tools/reach/start-playtest.ps1'
-      - 'tools/reach/Start-Reach-playtest.cmd'
+      - 'tools/reach/Start-*.cmd'
       - 'tools/reach/reach_prototype.cfg'
       - 'tools/reach/PLAYTEST.md'
   workflow_dispatch:
@@ -61,3 +61,9 @@ jobs:
           name: reach-bfg-win32
           path: build/reach-playtest/
           if-no-files-found: error
+      - name: Keep matching crash-debug symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-bfg-symbols
+          path: build/Win32/Release/*.pdb
+          if-no-files-found: warn

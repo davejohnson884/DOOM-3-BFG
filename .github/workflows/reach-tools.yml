@@ -9,7 +9,7 @@ on:
       - 'tools/reach/collect-*.ps1'
       - 'tools/reach/test-*.ps1'
       - 'tools/reach/start-playtest.ps1'
-      - 'tools/reach/Start-Reach-playtest.cmd'
+      - 'tools/reach/Start-*.cmd'
       - 'tools/reach/reach_prototype.cfg'
   workflow_dispatch:
 

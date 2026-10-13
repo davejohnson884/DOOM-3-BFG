@@ -24,3 +24,13 @@ The launcher enables `g_reachLabAutoConfig`, so the player loads `reach_prototyp
 - Try switching weapons during the windup, opening the PDA, and saving/loading: a cancelled pending action must produce no extra hit/throw. Already spawned grenades and consumed inventory follow normal BFG save behavior. Transient action timers reset on load.
 
 Close the game normally. Send `profile/reach_lab/qconsole.log` from the new `playtest-...` folder and describe which checks worked or failed; a short clip of V/G/Shift helps validate presentation. Keep backup/profile data private. If startup fails, send the error and the log if one was created. To return to your usual game, launch its original Steam/RBDoom/BFA executable normally.
+
+## Freeze/crash comparison
+
+The owner reports Steam's original BFG runs smoothly, while this source build can freeze with a responsive menu. The latest log shows successful 3440 x 1440 startup and a long map load, but no fatal error explaining that freeze. These launchers collect evidence; they are not confirmed fixes.
+
+1. Double-click `Start-Stock-baseline.cmd`. This uses our executable with Reach combat and its automatic config disabled, using the engine's normal threading. Enter `devmap game/alphalabs1`, wait for loading, then move around for a few minutes. Do not exec the Reach config during this comparison. Note whether it freezes.
+2. Close that game. Double-click `Start-Reach-diagnostic.cmd`. This keeps Reach controls but runs game/draw and renderer jobs on the main thread. Load the same level, use `give all`, and repeat movement and Shift/V/G. Note whether it freezes.
+3. Close each test through the menu if possible. If it becomes entirely unresponsive, close its process in Task Manager and leave the launcher open so it can finish collecting the report. Each test creates a `reach-diagnostics-...zip` beside the launcher. Send both ZIPs with the results.
+
+The reports include only the console log, launch settings/binary hash, CPU/GPU/driver names, process memory/responsiveness samples, exit status and matching Windows crash events when available. They exclude backup profiles, saves and game assets. Frame log lines record whether game time advances, pause/menu/control state and the threading mode. Windows crash events can arrive after the launcher exits, so absence of an event does not rule out a crash.

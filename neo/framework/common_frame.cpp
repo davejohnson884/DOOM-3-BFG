@@ -59,6 +59,7 @@ idCVar com_deltaTimeClamp( "com_deltaTimeClamp", "50", CVAR_INTEGER, "don't proc
 idCVar com_fixedTic( "com_fixedTic", DEFAULT_FIXED_TIC, CVAR_BOOL, "run a single game frame per render frame" );
 idCVar com_noSleep( "com_noSleep", DEFAULT_NO_SLEEP, CVAR_BOOL, "don't sleep if the game is running too fast" );
 idCVar com_smp( "com_smp", "1", CVAR_BOOL|CVAR_SYSTEM|CVAR_NOCHEAT, "run the game and draw code in a separate thread" );
+idCVar com_reachDiagnostics( "com_reachDiagnostics", "0", CVAR_BOOL | CVAR_SYSTEM | CVAR_NOCHEAT, "log gameplay progress and pause state every two seconds for playtest diagnosis" );
 idCVar com_aviDemoSamples( "com_aviDemoSamples", "16", CVAR_SYSTEM, "" );
 idCVar com_aviDemoWidth( "com_aviDemoWidth", "256", CVAR_SYSTEM, "" );
 idCVar com_aviDemoHeight( "com_aviDemoHeight", "256", CVAR_SYSTEM, "" );
@@ -643,6 +644,21 @@ void idCommonLocal::Frame() {
 		// make sure the game / draw thread has completed
 		// This may block if the game is taking longer than the render back end
 		gameThread.WaitForThread();
+
+		// Main-thread logging survives a stalled game view and does not depend on
+		// action inputs. It distinguishes advancing gameplay from a stuck pause.
+		if ( com_reachDiagnostics.GetBool() && mapSpawned && game != NULL ) {
+			static int lastDiagnosticTime = 0;
+			const int now = Sys_Milliseconds();
+			if ( now - lastDiagnosticTime >= 2000 ) {
+				lastDiagnosticTime = now;
+				Printf( "[ReachDiag] frame=%d gameTime=%d paused=%d shell=%d dialog=%d systemUI=%d inhibit=%d stopTime=%d skipDraw=%d reach=%d smp=%d jobs=%d\n",
+					gameFrame, game->GetServerGameTimeMs(), pauseGame, game->Shell_IsActive(),
+					Dialog().IsDialogPausing(), session->IsSystemUIShowing(), game->InhibitControls(),
+					cvarSystem->GetCVarBool( "g_stopTime" ), com_skipGameDraw.GetBool(),
+					cvarSystem->GetCVarBool( "g_reachCombat" ), com_smp.GetBool(), cvarSystem->GetCVarInteger( "jobs_numThreads" ) );
+			}
+		}
 
 		// Send local usermds to the server.
 		// This happens after the game frame has run so that prediction data is up to date.
