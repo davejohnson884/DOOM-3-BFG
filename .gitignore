@@ -12,3 +12,5 @@
 /tools/reach/assets/__pycache__/
 /tools/reach/assets/reach-weapon-data*/
 /tools/reach/assets/reach-weapon-data.path
+/tools/reach/rbdoom/**/__pycache__/
+/tools/reach/rbdoom/__pycache__/
