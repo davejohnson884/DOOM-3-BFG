@@ -71,6 +71,39 @@ def replace_keys(text, declaration, changes):
     return text[:match.start()]+match[1]+body+match[3]+text[match.end():]
 
 
+def retail_script(template):
+    """Use stock events; locals must not collide with global script events."""
+    stock_script = template.replace('scriptEvent float getReachPose();', '')
+    stock_script = stock_script.replace('getReachPose()', 'RetailReachPose()')
+    stock_script = stock_script.replace('object weapon_machinegun : weapon_base {', '''object weapon_machinegun : weapon_base {
+    float retail_sprinting;
+    float retail_ready_time;
+    float RetailReachPose();''')
+    stock_script += '''
+float weapon_machinegun::RetailReachPose() {
+    entity owner;
+    vector reach_move_vector;
+    float requested;
+    float now;
+    owner = getOwner();
+    reach_move_vector = owner.getMove();
+    now = sys.getTime();
+    requested = owner.getButtons() & 2;
+    if (requested && sys.vecLength(reach_move_vector) > 0 && now >= retail_ready_time) {
+        retail_sprinting = 1;
+        return 1;
+    }
+    if (retail_sprinting) {
+        retail_sprinting = 0;
+        retail_ready_time = now + 0.3;
+    }
+    if (now < retail_ready_time) { return 4; }
+    return 0;
+}
+'''
+    return stock_script
+
+
 def build(bundle, output, original_def):
     bundle = Path(bundle); output = Path(output)
     info = json.loads((output/'conversion-report.json').read_text())
@@ -126,34 +159,7 @@ def build(bundle, output, original_def):
     (output/'script/weapon_machinegun.script').write_text(template.read_text())
     # Retail preview uses existing stock script events only. Full quick actions
     # remain in the native version above, whose getReachPose event is new.
-    stock_script = template.read_text().replace('scriptEvent float getReachPose();', '')
-    stock_script = stock_script.replace('getReachPose()', 'RetailReachPose()')
-    stock_script = stock_script.replace('object weapon_machinegun : weapon_base {', '''object weapon_machinegun : weapon_base {
-    float retail_sprinting;
-    float retail_ready_time;
-    float RetailReachPose();''')
-    stock_script += '''
-float weapon_machinegun::RetailReachPose() {
-    entity owner;
-    vector move;
-    float requested;
-    float now;
-    owner = getOwner();
-    move = owner.getMove();
-    now = sys.getTime();
-    requested = owner.getButtons() & 2;
-    if (requested && sys.vecLength(move) > 0 && now >= retail_ready_time) {
-        retail_sprinting = 1;
-        return 1;
-    }
-    if (retail_sprinting) {
-        retail_sprinting = 0;
-        retail_ready_time = now + 0.3;
-    }
-    if (now < retail_ready_time) { return 4; }
-    return 0;
-}
-'''
+    stock_script = retail_script(template.read_text())
     (output/'stock-script').mkdir()
     (output/'stock-script/weapon_machinegun.script').write_text(stock_script)
     tuning['timingOverrides'] = {k: v for k, v in changes.items() if k.endswith('_ms')}

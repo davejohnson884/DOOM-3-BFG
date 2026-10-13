@@ -10,6 +10,8 @@ on:
       - 'tools/reach/test-*.ps1'
       - 'tools/reach/start-playtest.ps1'
       - 'tools/reach/Start-*.cmd'
+      - 'tools/reach/Fix-*.cmd'
+      - 'tools/reach/fix-*.ps1'
       - 'tools/reach/reach_prototype.cfg'
   workflow_dispatch:
 
@@ -67,3 +69,13 @@ jobs:
             tools/reach/collect-install-info.ps1
             tools/reach/Collect-combat-data.cmd
             tools/reach/collect-combat-data.ps1
+      - name: Check existing rifle script repair
+        shell: powershell
+        run: ./tools/reach/test-rifle-script-fix.ps1
+      - name: Upload rifle script fix
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-rifle-script-fix
+          path: |
+            tools/reach/Fix-Reach-rifle-script.cmd
+            tools/reach/fix-rifle-script.ps1

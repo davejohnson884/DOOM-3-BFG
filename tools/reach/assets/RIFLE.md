@@ -2,6 +2,8 @@
 
 This package builds the real collected Reach first-person rifle/Spartan arms, original animation frames, textures and sounds into a private BFG weapon pack. Generated game assets stay on your PC and are never part of the public GitHub artifact.
 
+If an earlier retail preview reports **Type mismatch on redeclaration of move**, close BFG and extract the **reach-rifle-script-fix** artifact into your existing launcher folder (beside `Start-Reach-rifle-stock.cmd` and `reach-weapon-data.path`). Double-click **Fix-Reach-rifle-script.cmd**, then start the stock launcher again. It backs up and repairs only the generated preview script; reuse your existing converted assets. New conversions already include the correction.
+
 1. Extract the full **reach-bfg-win32** artifact outside both Steam installs.
 2. Drag your existing full `reach-assets-...zip` (not a numbered part) or extracted donor folder onto **Build-Reach-rifle.cmd**. No collection rerun, terminal, Python or .NET installation is needed.
 3. When conversion completes, double-click **Start-Reach-rifle-stock.cmd** with Steam open. It previews the imported rifle through your existing Steam executable in a fresh lab profile, copying your stock config and keeping its display settings. Load a single-player map, give/select the machinegun, and it becomes the Reach MA37. If needed, open the console and enter `give weapon_machinegun` and `give ammo`, then select it through the existing weapon controls. Fire/reload and Shift presentation use stock script events. V/G quick actions require the source version below.

@@ -1,6 +1,7 @@
 import io
 import json
 import math
+import re
 import struct
 import tempfile
 import unittest
@@ -9,10 +10,25 @@ from pathlib import Path
 import numpy as np
 from convert_reach import read_codec, flags, md5q, read_dds, sounds
 from check_md5 import engine_matrix
-from build_weapon import resource_file, replace_keys
+from build_weapon import resource_file, replace_keys, retail_script
 
 
 class ConversionChecks(unittest.TestCase):
+    def test_weapon_variables_do_not_shadow_engine_events(self):
+        # GetDef checks global events even for local variable declarations.
+        # Derive their names from the public engine, not proprietary game scripts.
+        repo = Path(__file__).resolve().parents[3]
+        events = set()
+        for source in (repo/'neo/d3xp').rglob('*.cpp'):
+            events.update(re.findall(r'\bidEventDef\s+\w+\s*\(\s*"([^"\n]+)"', source.read_text(errors='replace')))
+        self.assertIn('move', events)
+        template = Path(__file__).with_name('reach_ar.script').read_text()
+        for script in (template, retail_script(template)):
+            script = re.sub(r'//[^\n]*|/\*.*?\*/', '', script, flags=re.S)
+            variables = set(re.findall(r'\b(?:float|vector|entity|boolean|string)\s+(\w+)\s*;', script))
+            self.assertGreater(len(variables), 10)
+            self.assertEqual(variables & events, set(), 'Doom rejects variables that shadow global script events')
+
     def test_known_quaternion_in_bfg_convention(self):
         # A real +90-degree Z rotation must send +X to +Y in BFG.
         q = np.array([0., 0., math.sqrt(.5), math.sqrt(.5)])
