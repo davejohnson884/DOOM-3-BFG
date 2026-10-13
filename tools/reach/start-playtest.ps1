@@ -97,7 +97,8 @@ if ($StockCombat) {
     $combatArguments = '+set g_reachCombat 0 +set g_reachLabAutoConfig 0'
 } else {
     $config += 'exec reach_prototype.cfg'
-    $combatArguments = '+set g_reachCombat 1 +set g_reachLabAutoConfig 1 +exec reach_prototype.cfg'
+    # autoexec and post-spawn loading already execute the prototype config.
+    $combatArguments = '+set g_reachCombat 1 +set g_reachLabAutoConfig 1'
 }
 Set-Content -LiteralPath (Join-Path $mod 'autoexec.cfg') -Value $config -Encoding ASCII
 $threadArguments = if ($SingleThreaded) {
@@ -108,6 +109,10 @@ $startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $pr
     '" +set fs_game reach_lab +set com_allowConsole 1 ' + $displayArguments +
     ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set logFileName "' + $consoleLog + '" +set com_timestampPrints 1' +
     ' +set com_reachDiagnostics ' + $diagnosticMode + ' ' + $threadArguments + ' ' + $combatArguments
+# WinMain tokenizes the entire command line through idCmdArgs (64 arguments).
+if ([regex]::Matches($startArguments, '"[^"]*"|\S+').Count -gt 64) {
+    throw 'The launch arguments exceed the engine parser limit. Move optional settings into a config file.'
+}
 [ordered]@{ binary = $binary; binarySha256 = $binaryHash; mode = $mode; threading = $threadMode; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'launch-plan.json') -Encoding UTF8
 Write-Host "Playtest session: $session"

@@ -87,6 +87,7 @@ using System.IO;
 using System.Threading;
 public static class ReachLaunchFixture {
     public static int Main(string[] args) {
+        if (args.Length > 64) { return 6; }
         int index = Array.IndexOf(args, "fs_savepath");
         if (index < 0) { return 4; }
         string mod = Path.Combine(args[index + 1], "reach_lab");
