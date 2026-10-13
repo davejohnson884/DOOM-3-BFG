@@ -210,7 +210,11 @@ void idCommonLocal::VPrintf( const char *fmt, va_list args ) {
 		}
 		if ( logFile ) {
 			logFile->Write( msg, strlen( msg ) );
-			logFile->Flush();	// ForceFlush doesn't help a whole lot
+			// Mode 1 uses the OS write cache. FlushFileBuffers on every print can
+			// stall gameplay; reserve that durability cost for diagnostic mode 2.
+			if ( com_logFile.GetInteger() > 1 ) {
+				logFile->Flush();
+			}
 		}
 	}
 

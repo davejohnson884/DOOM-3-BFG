@@ -2,6 +2,8 @@
 param(
     [string]$BfgPath = 'C:\Program Files (x86)\Steam\steamapps\common\DOOM 3 BFG Edition',
     [string]$SavedGamesDirectory = '',
+    [switch]$Windowed,
+    [switch]$FlushLog,
     [switch]$PrepareOnly
 )
 $ErrorActionPreference = 'Stop'
@@ -50,6 +52,26 @@ public static class ReachSavedGames {
 '@
     $SavedGamesDirectory = [ReachSavedGames]::Resolve()
 }
+$displayArguments = '+set r_fullscreen 0 +set r_windowWidth 1280 +set r_windowHeight 720'
+if (-not $Windowed) {
+    # Match the DPI-aware game executable when measuring the desktop.
+    Add-Type @'
+using System.Runtime.InteropServices;
+public static class ReachDesktop {
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+}
+'@
+    [ReachDesktop]::SetProcessDPIAware() | Out-Null
+    Add-Type -AssemblyName System.Windows.Forms
+    $screen = [System.Windows.Forms.Screen]::PrimaryScreen
+    if ($null -eq $screen) { throw 'No primary display was found. Try the launcher with -Windowed.' }
+    $bounds = $screen.Bounds
+    $displayArguments = '+set r_fullscreen -1 +set r_windowX ' + $bounds.X + ' +set r_windowY ' + $bounds.Y +
+        ' +set r_windowWidth ' + $bounds.Width + ' +set r_windowHeight ' + $bounds.Height
+    Write-Host "Display: borderless fullscreen, $($bounds.Width) x $($bounds.Height)"
+}
+$logMode = if ($FlushLog) { 2 } else { 1 }
 $session = Join-Path $package ('playtest-' + [Guid]::NewGuid().ToString('N'))
 $profile = Join-Path $session 'profile'
 $mod = Join-Path $profile 'reach_lab'
@@ -64,7 +86,9 @@ if (Test-Path -LiteralPath $originalProfile -PathType Container) {
 Copy-Item -LiteralPath (Join-Path $package 'reach_prototype.cfg') -Destination (Join-Path $mod 'reach_prototype.cfg')
 Set-Content -LiteralPath (Join-Path $mod 'autoexec.cfg') -Value 'exec reach_prototype.cfg' -Encoding ASCII
 $startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $profile +
-    '" +set fs_game reach_lab +set com_allowConsole 1 +set r_fullscreen 0 +set com_skipIntroVideos 1 +set logFile 2 +set g_reachCombat 1 +set g_reachLabAutoConfig 1 +exec reach_prototype.cfg'
+    '" +set fs_game reach_lab +set com_allowConsole 1 ' + $displayArguments +
+    ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set com_timestampPrints 1' +
+    ' +set g_reachCombat 1 +set g_reachLabAutoConfig 1 +exec reach_prototype.cfg'
 [ordered]@{ binary = $binary; data = $install; profile = $profile; originalProfile = $originalProfile; arguments = $startArguments } |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'launch-plan.json') -Encoding UTF8
 Write-Host "Playtest session: $session"

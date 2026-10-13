@@ -4,6 +4,8 @@ This build adds optional sprint, quick melee and quick grenade controls. It uses
 
 Extract the entire `reach-bfg-win32` artifact into a new folder outside Steam. Close any running BFG/RBDoom/BFA game, then double-click `Start-Reach-playtest.cmd`. No administrator access is needed. The launcher checks the executable against the included build checksum, copies the stock BFG save/profile directory into a backup if it exists, and creates a new lab profile for this run. It does not replace Steam executables or alter the original profile. The checksum checks package consistency; GitHub's artifact is the build provenance.
 
+The game now starts in borderless fullscreen at the primary desktop's resolution. Normal logging writes `qconsole.log` with timestamps and avoids flushing the disk after every message. If the game pauses or stops responding, note what you were doing and send that session's log. These settings address the small window and logging overhead; they do not establish that every freeze is fixed. For developer troubleshooting, the launcher accepts `-Windowed` (1280 x 720) and `-FlushLog` (flush after each message).
+
 Start an offline campaign or open the in-game console with `~` and enter these commands one at a time:
 
 ```

@@ -22,6 +22,13 @@ $plan = Get-Content (Join-Path $session[0].FullName 'launch-plan.json') -Raw | C
 if (-not $plan.profile.StartsWith($session[0].FullName) -or $plan.arguments -notmatch '\+set fs_game reach_lab') {
     throw 'The launch plan did not isolate its profile/mod directory.'
 }
+if ($plan.arguments -notmatch '\+set r_fullscreen -1\b' -or
+    $plan.arguments -notmatch '\+set r_windowWidth ([1-9][0-9]*)\b' -or
+    $plan.arguments -notmatch '\+set r_windowHeight ([1-9][0-9]*)\b' -or
+    $plan.arguments -notmatch '\+set logFile 1\b' -or
+    $plan.arguments -notmatch '\+set com_timestampPrints 1\b') {
+    throw 'Normal playtests must cover the desktop and use timestamped, buffered logging.'
+}
 $mod = Join-Path $plan.profile 'reach_lab'
 if (-not (Test-Path (Join-Path $mod 'reach_prototype.cfg')) -or
     (Get-Content (Join-Path $mod 'autoexec.cfg') -Raw).Trim() -ne 'exec reach_prototype.cfg' -or
@@ -33,9 +40,20 @@ if ((Get-Content $backupFile -Raw).Trim() -ne 'preserve this profile' -or
     (Get-Content (Join-Path $original 'existing-save.txt') -Raw).Trim() -ne 'preserve this profile') {
     throw 'The original profile was not preserved and backed up.'
 }
+& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $package 'start-playtest.ps1') -BfgPath $bfg -SavedGamesDirectory $saved -Windowed -FlushLog -PrepareOnly
+if ($LASTEXITCODE -ne 0) { throw 'Explicit windowed/flush-log preparation failed.' }
+$sessions = @(Get-ChildItem $package -Directory -Filter 'playtest-*')
+if ($sessions.Count -ne 2) { throw 'Expected a separate session for the explicit windowed launch.' }
+$windowedSession = @($sessions | Where-Object { $_.FullName -ne $session[0].FullName })[0]
+$windowedPlan = Get-Content (Join-Path $windowedSession.FullName 'launch-plan.json') -Raw | ConvertFrom-Json
+if ($windowedPlan.arguments -notmatch '\+set r_fullscreen 0\b' -or
+    $windowedPlan.arguments -notmatch '\+set r_windowWidth 1280\b' -or
+    $windowedPlan.arguments -notmatch '\+set logFile 2\b') {
+    throw 'Explicit windowed/flush-log options were ignored.'
+}
 Set-Content $binary 'modified fixture'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $package 'start-playtest.ps1') -BfgPath $bfg -SavedGamesDirectory $saved -PrepareOnly
 if ($LASTEXITCODE -eq 0) { throw 'A mismatched executable checksum was accepted.' }
-if (@(Get-ChildItem $package -Directory -Filter 'playtest-*').Count -ne 1) { throw 'Checksum failure created a session.' }
+if (@(Get-ChildItem $package -Directory -Filter 'playtest-*').Count -ne 2) { throw 'Checksum failure created a session.' }
 $global:LASTEXITCODE = 0
-Write-Host '::notice title=Playtest launcher::PASS: isolated profile, original-save backup and checksum rejection; no game was launched'
+Write-Host '::notice title=Playtest launcher::PASS: desktop display, buffered logging, diagnostic options, isolated profile, original-save backup and checksum rejection; no game was launched'

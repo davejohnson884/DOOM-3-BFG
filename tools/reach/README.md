@@ -16,6 +16,8 @@ The isolated sprint state-machine scenarios pass under GCC in C++98 mode. They c
 
 The workflow keeps the SDK installation out of the checkout, verifies the SDK installer's Microsoft signature before extraction, and uploads logs even when the build fails. A successful build uploads `reach-bfg-win32`; do not replace your Steam executable yet. A backed-up lab installation and runtime smoke test come first.
 
+The owner reports sprint, melee and grenade controls working after the readiness fix, but also reports freezes and a small window. The playtest launcher now defaults to borderless fullscreen at the primary desktop resolution and timestamped logging in mode 1. The engine's logging mode 1 now avoids a disk flush per print, as its documented behavior requires; mode 2 retains those diagnostic flushes. Runtime freeze diagnosis still requires a current log and whether the pauses recover or require closing the game.
+
 The modern compiler adapter keeps the original warning level and diagnostics, but does not promote legacy warnings to errors. The original source predates MSVC warnings about member shadowing, specialization storage classes and inline allocation operators. Actual compiler/linker errors still fail the workflow, and the isolated sprint tests use warnings as errors. Source compatibility changes retain the VS2010 annotation path and use SAL on modern MSVC.
 
 ## Runtime and assets
