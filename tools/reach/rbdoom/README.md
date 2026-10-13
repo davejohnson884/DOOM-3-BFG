@@ -1,0 +1,13 @@
+# Reach rifle for released RBDoom3BFG
+
+This tool repackages your existing converted Reach assets. It does not build or replace an engine executable.
+
+1. Extract **reach-rbdoom-tools** beside your existing `reach-weapon-data.path`. Double-click **Build-Reach-RBDoom.cmd**. Alternatively drag your converted `reach-weapon-data-...` folder onto that CMD.
+2. Extract the generated **Reach-RBDoom3BFG.zip** into the folder containing the released **RBDoom3BFG.exe** and its official support files. It adds `reach/`, **Play-Reach.cmd**, and **REACH-README.txt**. Keep the published port's official files installed as instructed by that release.
+3. Double-click **Play-Reach.cmd**. This directly starts RBDoom3BFG with `+set fs_game reach`. It does not run PowerShell, create linked data folders, or set display/rendering/threading cvars. Load a single-player map and select the machinegun; it is the Reach rifle. If needed, open the console and use `give weapon_machinegun` and `give ammo`.
+
+The package implements firing/reload with imported clips and sounds, Shift sprint presentation using BFG's native run input, and V quick melee using ordinary script objects and a map trigger. Damage occurs once at the imported melee contact time; the original melee animation plays without selecting fists. Its range is currently BFG's 64 units; Reach lunge is not implemented. The physical counter uses reconstructed seven-segment glyphs because only the donor's zero bitmap was collected. A project-authored muzzle flash particle is supplied, rather than a Halo effect import.
+
+This is the first rifle package for the new host, not the complete Phase 1 combat port. Runtime loading/visuals/input/save behavior still require verification in the published port. G quick grenades are not wired: the existing script interface has no verified method to consume the player's separate grenade ammunition while this rifle remains selected. Grenade inventory integration, original grenade projectile, full camera/recoil/bloom fidelity and additional weapons remain work. Health and shields are Phase 2. Doom weapon inventory remains the host's inventory.
+
+Your resulting ZIP contains your locally converted game content. Keep it private; public tools contain project code only. The builder refuses to overwrite an existing ZIP. Remove the mod by deleting only its `reach` folder and launcher/readme after closing the game.

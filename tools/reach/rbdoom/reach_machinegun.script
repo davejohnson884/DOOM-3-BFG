@@ -1,0 +1,236 @@
+// Original project code for the released RBDoom3BFG weapon-script interface.
+#include "script/reach_controls.script"
+
+object weapon_machinegun : weapon_base {
+    float next_attack;
+    float bloom;
+    float bloom_time;
+    float rate;
+    float spread_min;
+    float spread_max;
+    float recovery;
+    float reach_pending_melee;
+    float reach_action_locked;
+    float reach_sprinting;
+    float reach_ready_time;
+    float ReachPose();
+    void ReachRequestMelee();
+    void ReachAmmoDisplay();
+    void EnterCinematic();
+    void init();
+    void Raise();
+    void Lower();
+    void Idle();
+    void Fire();
+    void Reload();
+    void Sprint();
+    void SprintExit();
+    void Quick();
+    void ExitCinematic();
+    void RecoverBloom();
+};
+
+void weapon_machinegun::init() {
+    entity reach_controller;
+    entity reach_trigger;
+    reach_pending_melee = 0;
+    reach_action_locked = 0;
+    reach_sprinting = 0;
+    reach_ready_time = 0;
+    reach_controller = sys.getEntity("reach_controls");
+    if (reach_controller == $null_entity) {
+        reach_controller = sys.spawn("reach_input_control");
+        reach_trigger = sys.spawn("reach_input_melee");
+    }
+    next_attack = 0;
+    bloom = 0;
+    bloom_time = sys.getTime();
+    rate = getFloatKey("reach_fire_interval");
+    spread_min = getFloatKey("reach_spread_min");
+    spread_max = getFloatKey("reach_spread_max");
+    recovery = getFloatKey("reach_spread_recovery");
+    weaponState("Raise", 0);
+}
+
+void weapon_machinegun::RecoverBloom() {
+    float now;
+    now = sys.getTime();
+    bloom = bloom - (now - bloom_time) / recovery;
+    if (bloom < 0) { bloom = 0; }
+    bloom_time = now;
+}
+
+void weapon_machinegun::Raise() {
+    weaponRising();
+    playAnim(ANIMCHANNEL_ALL, "raise");
+    waitUntil(animDone(ANIMCHANNEL_ALL, 2));
+    weaponState("Idle", 2);
+}
+
+void weapon_machinegun::Lower() {
+    weaponLowering();
+    playAnim(ANIMCHANNEL_ALL, "putaway");
+    waitUntil(animDone(ANIMCHANNEL_ALL, 0));
+    weaponHolstered();
+    waitUntil(WEAPON_RAISEWEAPON);
+    weaponState("Raise", 0);
+}
+
+void weapon_machinegun::Idle() {
+    if (ammoInClip() > 0) { weaponReady(); } else { weaponOutOfAmmo(); }
+    playCycle(ANIMCHANNEL_ALL, "idle");
+    while (1) {
+        RecoverBloom();
+        ReachAmmoDisplay();
+        if (WEAPON_LOWERWEAPON) { weaponState("Lower", 2); }
+        if (ReachPose() == 2) { weaponState("Quick", 1); }
+        if (ReachPose() == 1) { weaponState("Sprint", 2); }
+        if (WEAPON_RELOAD && ammoInClip() < clipSize() && ammoAvailable() > ammoInClip()) {
+            netReload(); weaponState("Reload", 2);
+        }
+        if (WEAPON_ATTACK && sys.getTime() >= next_attack && ReachPose() == 0) {
+            if (ammoInClip() > 0) { weaponState("Fire", 0); }
+            else if (ammoAvailable() > 0 && autoReload()) { netReload(); weaponState("Reload", 2); }
+        }
+        waitFrame();
+    }
+}
+
+void weapon_machinegun::Fire() {
+    RecoverBloom();
+    next_attack = sys.getTime() + rate;
+    launchProjectiles(1, spread_min + (spread_max - spread_min) * bloom, 0, 1, 1);
+    bloom = bloom + 0.1;
+    if (bloom > 1) { bloom = 1; }
+    playAnim(ANIMCHANNEL_ALL, "fire");
+    while (!animDone(ANIMCHANNEL_ALL, 0)) {
+        ReachAmmoDisplay();
+        if (WEAPON_LOWERWEAPON) { weaponState("Lower", 2); }
+        if (ReachPose() == 2) { weaponState("Quick", 1); }
+        if (ReachPose() == 1) { weaponState("Sprint", 2); }
+        if (WEAPON_ATTACK && ammoInClip() > 0 && sys.getTime() >= next_attack) { weaponState("Fire", 0); }
+        waitFrame();
+    }
+    weaponState("Idle", 1);
+}
+
+void weapon_machinegun::Reload() {
+    float started;
+    boolean filled;
+    started = sys.getTime();
+    filled = false;
+    weaponReloading();
+    if (ammoInClip() > 0) { playAnim(ANIMCHANNEL_ALL, "reload_full"); }
+    else { playAnim(ANIMCHANNEL_ALL, "reload_empty"); }
+    while (!animDone(ANIMCHANNEL_ALL, 0)) {
+        if (WEAPON_LOWERWEAPON) { weaponState("Lower", 2); }
+        if (ReachPose() == 2) { weaponState("Quick", 1); }
+        if (ReachPose() == 1) { weaponState("Sprint", 2); }
+        if (!filled && sys.getTime() >= started + getFloatKey("reach_reload_fill_time")) {
+            addToClip(clipSize());
+            filled = true;
+            ReachAmmoDisplay();
+        }
+        waitFrame();
+    }
+    if (!filled) { addToClip(clipSize()); }
+    weaponState("Idle", 2);
+}
+
+void weapon_machinegun::Sprint() {
+    weaponReady();
+    playAnim(ANIMCHANNEL_ALL, "sprint_enter");
+    while (!animDone(ANIMCHANNEL_ALL, 0) && ReachPose() == 1) { waitFrame(); }
+    if (ReachPose() == 2) { weaponState("Quick", 1); }
+    if (ReachPose() != 1) { weaponState("SprintExit", 1); }
+    playCycle(ANIMCHANNEL_ALL, "sprint_loop");
+    while (ReachPose() == 1) { waitFrame(); }
+    if (ReachPose() == 2) { weaponState("Quick", 1); }
+    weaponState("SprintExit", 1);
+}
+
+void weapon_machinegun::SprintExit() {
+    weaponReady();
+    playAnim(ANIMCHANNEL_ALL, "sprint_exit");
+    while (!animDone(ANIMCHANNEL_ALL, 1)) {
+        if (WEAPON_LOWERWEAPON) { weaponState("Lower", 2); }
+        if (ReachPose() == 2) { weaponState("Quick", 1); }
+        if (ReachPose() == 1) { weaponState("Sprint", 1); }
+        if (ReachPose() == 0 && WEAPON_ATTACK && ammoInClip() > 0) { weaponState("Fire", 0); }
+        waitFrame();
+    }
+    weaponState("Idle", 2);
+}
+
+void weapon_machinegun::Quick() {
+    float reach_hit_time;
+    float reach_done_time;
+    boolean reach_hit_done;
+    reach_action_locked = 1;
+    reach_pending_melee = 0;
+    reach_hit_done = false;
+    reach_hit_time = sys.getTime() + getFloatKey("reach_melee_windup_ms") / 1000;
+    reach_done_time = reach_hit_time + getFloatKey("reach_melee_recover_ms") / 1000;
+    weaponReady();
+    playAnim(ANIMCHANNEL_ALL, "melee");
+    while (sys.getTime() < reach_done_time) {
+        if (WEAPON_LOWERWEAPON) {
+            reach_action_locked = 0;
+            weaponState("Lower", 2);
+        }
+        if (!reach_hit_done && sys.getTime() >= reach_hit_time) {
+            melee();
+            reach_hit_done = true;
+        }
+        ReachAmmoDisplay();
+        waitFrame();
+    }
+    reach_action_locked = 0;
+    weaponState("Idle", 2);
+}
+
+void weapon_machinegun::ReachRequestMelee() {
+    if (!reach_action_locked && !WEAPON_LOWERWEAPON) { reach_pending_melee = 1; }
+}
+
+void weapon_machinegun::ReachAmmoDisplay() {
+    float reach_ones;
+    reach_ones = ammoInClip() % 10;
+    setShaderParm(9, (ammoInClip() - reach_ones) / 100);
+    setShaderParm(10, reach_ones / 10);
+}
+
+float weapon_machinegun::ReachPose() {
+    entity reach_player;
+    vector reach_motion;
+    float reach_run_requested;
+    float reach_clock;
+    if (reach_pending_melee) { return 2; }
+    reach_player = getOwner();
+    reach_motion = reach_player.getMove();
+    reach_clock = sys.getTime();
+    reach_run_requested = reach_player.getButtons() & 2;
+    if (reach_run_requested && sys.vecLength(reach_motion) > 0 && reach_clock >= reach_ready_time) {
+        reach_sprinting = 1;
+        return 1;
+    }
+    if (reach_sprinting) {
+        reach_sprinting = 0;
+        reach_ready_time = reach_clock + getFloatKey("reach_sprint_recover_ms") / 1000;
+    }
+    if (reach_clock < reach_ready_time) { return 4; }
+    return 0;
+}
+
+void weapon_machinegun::EnterCinematic() {
+    reach_pending_melee = 0;
+    reach_action_locked = 1;
+}
+
+void weapon_machinegun::ExitCinematic() {
+    reach_pending_melee = 0;
+    reach_action_locked = 0;
+    reach_sprinting = 0;
+    next_attack = 0;
+    weaponState("Idle", 0);
+}

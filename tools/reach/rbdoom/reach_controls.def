@@ -1,0 +1,12 @@
+entityDef reach_input_control {
+    "spawnclass" "idEntity"
+    "scriptobject" "reach_input_control"
+    "name" "reach_controls"
+}
+
+entityDef reach_input_melee {
+    "spawnclass" "idTarget_CallObjectFunction"
+    "name" "reach_melee_input"
+    "target" "reach_controls"
+    "call" "ReachMelee"
+}

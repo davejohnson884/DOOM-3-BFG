@@ -1,0 +1,20 @@
+// Ordinary script objects and map triggers; no native extensions or injection.
+object reach_input_control {
+    void init();
+    void ReachMelee();
+};
+
+void reach_input_control::init() {
+}
+
+void reach_input_control::ReachMelee() {
+    entity reach_player;
+    entity reach_weapon;
+    reach_player = sys.getEntity("player1");
+    if (reach_player == $null_entity) { return; }
+    if (reach_player.getCurrentWeapon() != "weapon_machinegun" || reach_player.inPDA()) { return; }
+    reach_weapon = reach_player.getWeaponEntity();
+    if (reach_weapon != $null_entity && reach_weapon.hasFunction("ReachRequestMelee")) {
+        reach_weapon.callFunction("ReachRequestMelee");
+    }
+}

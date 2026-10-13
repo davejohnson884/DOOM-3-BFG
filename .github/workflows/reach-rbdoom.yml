@@ -1,0 +1,56 @@
+name: Reach RBDoom drop-in tools
+
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - 'tools/reach/rbdoom/**'
+      - 'tools/reach/assets/build_weapon.py'
+      - '.github/workflows/reach-rbdoom.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check private mod packaging
+        shell: pwsh
+        run: |
+          $env:PYTHONPATH = (Resolve-Path tools/reach/assets).Path
+          python tools/reach/rbdoom/test_package.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check direct executable launcher
+        shell: powershell
+        run: ./tools/reach/rbdoom/test-launch.ps1
+      - name: Build standalone private packager
+        shell: pwsh
+        run: |
+          python -m pip install pyinstaller==6.16.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $templates = (Resolve-Path tools/reach/rbdoom).Path
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachRBDoomPack --paths tools/reach/assets --add-data "${templates}/reach_machinegun.script:." --add-data "${templates}/reach_controls.script:." --add-data "${templates}/reach_controls.def:." --add-data "${templates}/Play-Reach.cmd:." --add-data "${templates}/README.md:." --distpath build/rbdoom-tools --workpath build/rbdoom-packager --specpath build tools/reach/rbdoom/package_reach.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/rbdoom-tools/ReachRBDoomPack.exe --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:PYTHONPATH = (Resolve-Path tools/reach/assets).Path
+          python tools/reach/rbdoom/test_frozen.py build/rbdoom-tools/ReachRBDoomPack.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item tools/reach/rbdoom/Build-Reach-RBDoom.cmd, tools/reach/rbdoom/README.md build/rbdoom-tools/
+          New-Item -ItemType Directory build/rbdoom-tools/licenses -Force | Out-Null
+          Copy-Item COPYING.txt build/rbdoom-tools/licenses/Project-GPL.txt
+          python tools/reach/rbdoom/copy_licenses.py build/rbdoom-tools/licenses
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload tools only
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-rbdoom-tools
+          path: build/rbdoom-tools/
+          if-no-files-found: error
