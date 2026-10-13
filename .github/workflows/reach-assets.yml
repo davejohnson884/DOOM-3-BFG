@@ -1,0 +1,66 @@
+name: Reach weapon asset tooling
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - '.github/workflows/reach-assets.yml'
+      - 'tools/reach/assets/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  asset-tools:
+    runs-on: windows-2022
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - uses: actions/checkout@v4
+        with:
+          repository: Gravemind2401/Reclaimer
+          ref: 36224d7a4581f2a1f255099bf706aa56be9f6e21
+          path: build/asset-deps/reclaimer
+      - uses: actions/checkout@v4
+        with:
+          repository: TheGuardians/TagTool
+          ref: ce2dc6ac13072b160752af618ea1dc143e2727ac
+          submodules: true
+          path: build/asset-deps/tagtool
+      - uses: actions/checkout@v4
+        with:
+          repository: XboxChaos/Assembly
+          ref: fd14ef3c46135e9422966c6a64cd926fb0bd23fb
+          path: build/asset-deps/assembly
+      - name: Build standalone Windows asset collector
+        shell: pwsh
+        run: |
+          dotnet publish tools/reach/assets/ReachAssetExport.csproj -c Release -r win-x64 --self-contained true -p:Platform=x64 -o build/reach-asset-tools 2>&1 | Tee-Object build/reach-assets-build.log
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content build/reach-assets-build.log | Where-Object { $_ -match 'error ' } | Select-Object -Unique -First 15 | ForEach-Object { Write-Host "::error title=Asset tool build::$_" }
+            exit 1
+          }
+          Copy-Item tools/reach/assets/Collect-Reach-assets.cmd, tools/reach/assets/ASSETS.md build/reach-asset-tools/
+          New-Item -ItemType Directory build/reach-asset-tools/licenses -Force | Out-Null
+          Copy-Item build/asset-deps/reclaimer/LICENSE build/reach-asset-tools/licenses/Reclaimer.txt
+          Copy-Item build/asset-deps/tagtool/LICENSE build/reach-asset-tools/licenses/TagTool.txt
+          Copy-Item build/asset-deps/assembly/LICENSE build/reach-asset-tools/licenses/Assembly.txt -ErrorAction Stop
+          Copy-Item build/asset-deps/tagtool/ShaderGenerator/LICENSE build/reach-asset-tools/licenses/ShaderGenerator.txt -ErrorAction Stop
+      - name: Validate serializers and native runtime
+        shell: pwsh
+        run: |
+          & build/reach-asset-tools/ReachAssetExport.exe --selftest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload collection tool
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-asset-tools
+          path: build/reach-asset-tools/
+          if-no-files-found: error
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-assets-build-log
+          path: build/reach-assets-build.log

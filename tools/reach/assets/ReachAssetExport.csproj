@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ReachAssetExport</AssemblyName>
+    <ReclaimerRoot Condition="'$(ReclaimerRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\build\asset-deps\reclaimer</ReclaimerRoot>
+    <TagToolRoot Condition="'$(TagToolRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\build\asset-deps\tagtool</TagToolRoot>
+    <AssemblyRoot Condition="'$(AssemblyRoot)' == ''">$(MSBuildThisFileDirectory)..\..\..\build\asset-deps\assembly</AssemblyRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(ReclaimerRoot)\Reclaimer.Blam\Reclaimer.Blam.csproj" />
+    <ProjectReference Include="$(TagToolRoot)\TagTool\TagTool.csproj" />
+    <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\Reach\jmad.xml" Link="schemas\jmad.xml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\weap.xml" Link="schemas\weap.xml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\proj.xml" Link="schemas\proj.xml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\Reach\jpt!.xml" Link="schemas\jpt!.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

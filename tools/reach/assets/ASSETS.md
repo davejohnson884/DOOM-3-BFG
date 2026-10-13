@@ -1,0 +1,11 @@
+# Reach assault rifle asset collection
+
+Extract the entire `reach-asset-tools` build artifact into a folder outside both Steam game installations. Double-click `Collect-Reach-assets.cmd`. It reads your MCC Reach `forge_halo.map` and PC sound bank at the previously supplied install path. Neither game is launched, and installed game files are not modified. The included runtime avoids a separate .NET installation.
+
+The tool collects the assault rifle's first-person skinned model, matching first-person animation graph and inherited graphs, candidate Spartan arm rigs, referenced DDS textures, weapon/projectile/damage data and decoded rifle/frag sounds. It uses Reclaimer for Reach cache/geometry/resource access and TagTool's Reach-aware animation codecs. It attempts actual animation exports to JMA-family files and retains raw graph/resource data if the current MCC build cannot be decoded. It records missing/inherited/unsupported clips instead of substituting invented animations. This is donor collection for conversion, not a finished BFG weapon pack.
+
+Send the generated private `reach-assets-...zip` to the project chat. If the ZIP exceeds the upload size, the tool creates numbered `.zip.part001`, `.zip.part002`, etc.; send all numbered parts together. The console prints the full ZIP SHA256 so the parts can be verified after joining. Keep these generated donor assets outside GitHub. No diagnostic playtest is required for this step.
+
+The next conversion uses the exported skeletons/weights and animation frames to build BFG MD5 meshes/clips and materials, aligns the arms/weapon/muzzle, and applies the extracted firing/reload/spread data. Actual decoding and in-game appearance must be verified against your files; a passing tool build does not prove the Reach extraction succeeded.
+
+Upstream source pins and licenses are included in this package. Reclaimer: https://github.com/Gravemind2401/Reclaimer. TagTool: https://github.com/TheGuardians/TagTool. Assembly tag layouts: https://github.com/XboxChaos/Assembly. The project follows Universal Modder's content-port workflow: local donor extraction, target-format conversion, then verification of one complete weapon in the host game.

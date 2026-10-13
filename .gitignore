@@ -4,3 +4,7 @@
 /tools/reach/reach-combat-data-*.zip
 /tools/reach/playtest-*/
 /tools/reach/reach-diagnostics-*.zip
+/tools/reach/assets/reach-assets-*/
+/tools/reach/assets/reach-assets-*.zip*
+/tools/reach/assets/bin/
+/tools/reach/assets/obj/
