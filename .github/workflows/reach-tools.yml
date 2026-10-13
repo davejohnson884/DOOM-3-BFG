@@ -49,7 +49,16 @@ jobs:
             Write-Host "::error title=Playtest preparation test::$detail"
             exit 1
           }
+      - name: Check converted rifle staging
+        shell: powershell
+        run: |
+          try { & ./tools/reach/test-rifle-launch.ps1 }
+          catch {
+            Write-Host "::error title=Rifle staging::$($_.Exception.Message)"
+            exit 1
+          }
       - name: Upload double-click collection helpers
+        # Kept separate from the private generated weapon pack.
         uses: actions/upload-artifact@v4
         with:
           name: reach-collection-tools

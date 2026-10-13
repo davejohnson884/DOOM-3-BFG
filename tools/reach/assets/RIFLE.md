@@ -1,0 +1,17 @@
+# Reach MA37 first weapon slice
+
+This package builds the real collected Reach first-person rifle/Spartan arms, original animation frames, textures and sounds into a private BFG weapon pack. Generated game assets stay on your PC and are never part of the public GitHub artifact.
+
+1. Extract the full **reach-bfg-win32** artifact outside both Steam installs.
+2. Drag your existing full `reach-assets-...zip` (not a numbered part) or extracted donor folder onto **Build-Reach-rifle.cmd**. No collection rerun, terminal, Python or .NET installation is needed.
+3. When conversion completes, double-click **Start-Reach-rifle-stock.cmd** with Steam open. It previews the imported rifle through your existing Steam executable in a fresh lab profile, copying your stock config and keeping its display settings. Load a single-player map, give/select the machinegun, and it becomes the Reach MA37. If needed, open the console and enter `give weapon_machinegun` and `give ammo`, then select it through the existing weapon controls. Fire/reload and Shift presentation use stock script events. V/G quick actions require the source version below.
+
+**Start-Reach-rifle.cmd** instead uses the rebuilt executable with the previously proven native Shift/V/G controls and corresponding imported poses. Its normal threading policy is retained; the earlier source-build stability issue remains unresolved, so the stock executable preview is the first visual test. Neither launcher replaces the installed executable or uses your original save folder.
+
+The converted mesh contains 52 original joints plus four source marker joints. The converter checks all 25 clips/844 frames against BFG's positive-W quaternion convention and validates bounds/weights before preparing the mod. Firing uses three original variants, a 32-round magazine and the original 10-round/second rate. Reload fills at the exported primary keyframe; melee/throw effects use the exported primary keyframes. Sprint and quick actions can interrupt this weapon's reload. Individual converted clips are retained even when gameplay does not yet use them.
+
+**This is an experimental weapon slice, not the finished Reach combat-system port.** A passing build/converter test does not prove runtime parity. Actual retail loose-asset loading, in-game appearance, animation transitions, input timing, materials and long-session stability still require owner verification. The stock preview's movement remains native BFG movement; full Reach stamina/quick-action handling belongs to the source version.
+
+Known content gaps: the physical ammo-counter texture currently contains only digit zero, Halo detail/lighting/color-change behavior needs further material work, bloom uses an approximation, integer BFG damage rounds the original fractional range, and the grenade projectile/third-person gun remain BFG assets. HUD ammo still follows the actual magazine. Jump/look/movement screens are converted but are not all layered into gameplay yet. No death/gib rules, engine renderer/threading policy, Steam executable or original saves are changed by this asset workflow.
+
+To remove the experiment, delete its generated lab/session folders after closing the game. Keep the original donor ZIP for subsequent refinements. Source and third-party license notices are included in the artifact; the original BFG declaration is read locally from your installation and patched only in the generated private pack.

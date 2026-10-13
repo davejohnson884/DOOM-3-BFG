@@ -4856,6 +4856,20 @@ void idPlayer::ConfigureReachLabControls() {
 	}
 }
 
+int idPlayer::GetReachViewPose() const {
+	if ( !g_reachCombat.GetBool() || common->IsMultiplayer() || health <= 0 ) { return 0; }
+	const reachActionKind_t kind = reachAction.CurrentKind( gameLocal.time );
+	if ( kind == REACH_ACTION_MELEE ) { return 2; }
+	if ( kind == REACH_ACTION_GRENADE ) { return 3; }
+	if ( reachSprint.IsActive() ) { return 1; }
+	return reachSprint.BlocksWeapon( gameLocal.time ) ? 4 : 0;
+}
+
+int idPlayer::GetReachSprintRecoveryMS() const {
+	const int fallback = g_reachSprintRecoverMS.GetInteger();
+	return weapon.IsValid() ? idMath::ClampInt( 0, 2000, weapon.GetEntity()->spawnArgs.GetInt( "reach_sprint_recover_ms", va( "%d", fallback ) ) ) : fallback;
+}
+
 bool idPlayer::CanReachAction() {
 	const bool allowLowered = reachSprint.BlocksWeapon( gameLocal.time ) || reachAction.BlocksWeapon( gameLocal.time );
 	return g_reachCombat.GetBool() && !common->IsMultiplayer() && health > 0
@@ -4865,7 +4879,8 @@ bool idPlayer::CanReachAction() {
 		&& !( focusCharacter && focusCharacter->health > 0 )
 		&& gameLocal.world && !gameLocal.world->spawnArgs.GetBool( "no_Weapons" )
 		&& weapon.IsValid() && weapon.GetEntity()->IsLinked()
-		&& weapon.GetEntity()->IsReady( allowLowered ) && !weapon.GetEntity()->IsReloading()
+		&& weapon.GetEntity()->IsReady( allowLowered )
+		&& ( !weapon.GetEntity()->IsReloading() || weapon.GetEntity()->spawnArgs.GetBool( "reach_has_pose_anims" ) )
 		&& currentWeapon >= 0 && idealWeapon.Get() == currentWeapon;
 }
 
@@ -4883,10 +4898,13 @@ void idPlayer::BeginReachAction( reachActionKind_t kind ) {
 			return;
 		}
 	}
-	const int windup = kind == REACH_ACTION_MELEE ? g_reachMeleeWindupMS.GetInteger() : g_reachGrenadeWindupMS.GetInteger();
-	const int recovery = kind == REACH_ACTION_MELEE ? g_reachMeleeRecoverMS.GetInteger() : g_reachGrenadeRecoverMS.GetInteger();
+	const idDict &actionDef = weapon.GetEntity()->spawnArgs;
+	const int defaultWindup = kind == REACH_ACTION_MELEE ? g_reachMeleeWindupMS.GetInteger() : g_reachGrenadeWindupMS.GetInteger();
+	const int defaultRecovery = kind == REACH_ACTION_MELEE ? g_reachMeleeRecoverMS.GetInteger() : g_reachGrenadeRecoverMS.GetInteger();
+	const int windup = idMath::ClampInt( 0, 2000, actionDef.GetInt( kind == REACH_ACTION_MELEE ? "reach_melee_windup_ms" : "reach_grenade_windup_ms", va( "%d", defaultWindup ) ) );
+	const int recovery = idMath::ClampInt( 0, 2000, actionDef.GetInt( kind == REACH_ACTION_MELEE ? "reach_melee_recover_ms" : "reach_grenade_recover_ms", va( "%d", defaultRecovery ) ) );
 	if ( reachAction.Begin( kind, gameLocal.time, windup, recovery ) ) {
-		reachSprint.Stop( gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
+		reachSprint.Stop( gameLocal.time, GetReachSprintRecoveryMS() );
 		weapon.GetEntity()->EndAttack();
 		AI_ATTACK_HELD = false;
 	} else if ( g_reachCombatDebug.GetBool() ) {
@@ -4956,7 +4974,13 @@ void idPlayer::Weapon_Combat() {
 		AI_ATTACK_HELD = false;
 		AI_WEAPON_FIRED = false;
 		weapon.GetEntity()->EndAttack();
-		weapon.GetEntity()->LowerWeapon();
+		// Converted weapons present their own authored sprint/action poses. Keep
+		// the stock hide offset for GUI/NPC interactions and placeholder weapons.
+		if ( weapon.GetEntity()->spawnArgs.GetBool( "reach_has_pose_anims" ) ) {
+			weapon.GetEntity()->RaiseWeapon();
+		} else {
+			weapon.GetEntity()->LowerWeapon();
+		}
 		return;
 	}
 
@@ -6654,7 +6678,7 @@ void idPlayer::PerformImpulse( int impulse ) {
 		}
 		case IMPULSE_13: {
 			if ( g_reachCombat.GetBool() && !common->IsMultiplayer() ) {
-				reachSprint.Stop( gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
+				reachSprint.Stop( gameLocal.time, GetReachSprintRecoveryMS() );
 			}
 			Reload();
 			break;
@@ -6814,7 +6838,7 @@ void idPlayer::AdjustSpeed() {
 			&& idealWeapon.Get() == currentWeapon
 			&& !reachAction.BlocksWeapon( gameLocal.time )
 			&& reachSprint.HasCharge( stamina, pm_stamina.GetFloat(), g_reachSprintMinimumCharge.GetFloat() );
-		reachSprint.Update( requested, allowed, gameLocal.time, g_reachSprintRecoverMS.GetInteger() );
+		reachSprint.Update( requested, allowed, gameLocal.time, GetReachSprintRecoveryMS() );
 	} else {
 		reachSprint.Reset();
 		reachAction.Reset();

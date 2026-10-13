@@ -10,8 +10,11 @@ int main() {
 	Check( action.Begin( REACH_ACTION_GRENADE, 100, 250, 450 ), "grenade accepted while idle" );
 	Check( !action.Begin( REACH_ACTION_MELEE, 110, 100, 500 ), "melee cannot overlap grenade windup" );
 	Check( action.ConsumeEffect( 349 ) == REACH_ACTION_NONE, "windup does not consume grenade ammo" );
+	Check( action.CurrentKind( 349 ) == REACH_ACTION_GRENADE, "throw presentation is active during windup" );
 	Check( action.ConsumeEffect( 350 ) == REACH_ACTION_GRENADE, "throw becomes due at the windup boundary" );
 	Check( action.ConsumeEffect( 351 ) == REACH_ACTION_NONE, "throw effect cannot repeat next frame" );
+	Check( action.CurrentKind( 351 ) == REACH_ACTION_GRENADE, "presentation continues after effect until recovery" );
+	Check( action.CurrentKind( 800 ) == REACH_ACTION_NONE, "finished action releases presentation" );
 	Check( action.BlocksWeapon( 799 ) && !action.BlocksWeapon( 800 ), "fire waits until recovery ends" );
 	Check( action.Begin( REACH_ACTION_MELEE, 800, 100, 500 ), "melee can start after grenade recovery" );
 	action.CancelPending();

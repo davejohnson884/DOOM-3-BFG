@@ -425,6 +425,8 @@ public:
 
 							idPlayer();
 	virtual					~idPlayer();
+	int						GetReachViewPose() const;
+	int						GetReachSprintRecoveryMS() const;
 
 	void					Spawn();
 	void					Think();

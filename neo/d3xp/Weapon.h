@@ -392,6 +392,7 @@ private:
 	void					Event_AmmoAvailable();
 	void					Event_TotalAmmoCount();
 	void					Event_ClipSize();
+	void					Event_GetReachPose();
 	void					Event_PlayAnim( int channel, const char *animname );
 	void					Event_PlayCycle( int channel, const char *animname );
 	void					Event_AnimDone( int channel, int blendFrames );

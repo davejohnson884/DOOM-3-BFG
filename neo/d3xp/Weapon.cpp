@@ -43,6 +43,7 @@ If you have questions concerning this license or the applicable additional terms
 //
 const idEventDef EV_Weapon_Clear( "<clear>" );
 const idEventDef EV_Weapon_GetOwner( "getOwner", NULL, 'e' );
+const idEventDef EV_Weapon_GetReachPose( "getReachPose", NULL, 'd' );
 const idEventDef EV_Weapon_Next( "nextWeapon" );
 const idEventDef EV_Weapon_State( "weaponState", "sd" );
 const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );
@@ -86,6 +87,7 @@ const idEventDef EV_Weapon_StopWeaponLight( "stopWeaponLight", "s" );
 CLASS_DECLARATION( idAnimatedEntity, idWeapon )
 	EVENT( EV_Weapon_Clear,						idWeapon::Event_Clear )
 	EVENT( EV_Weapon_GetOwner,					idWeapon::Event_GetOwner )
+	EVENT( EV_Weapon_GetReachPose,				idWeapon::Event_GetReachPose )
 	EVENT( EV_Weapon_State,						idWeapon::Event_WeaponState )
 	EVENT( EV_Weapon_WeaponReady,				idWeapon::Event_WeaponReady )
 	EVENT( EV_Weapon_WeaponOutOfAmmo,			idWeapon::Event_WeaponOutOfAmmo )
@@ -3246,6 +3248,10 @@ void idWeapon::Event_NetEndReload() {
 idWeapon::Event_PlayAnim
 ===============
 */
+void idWeapon::Event_GetReachPose() {
+	idThread::ReturnInt( owner != NULL ? owner->GetReachViewPose() : 0 );
+}
+
 void idWeapon::Event_PlayAnim( int channel, const char *animname ) {
 	int anim;
 	

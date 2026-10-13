@@ -10,6 +10,7 @@ public:
 	reachAction_t() { Reset(); }
 	void Reset() { kind = REACH_ACTION_NONE; effectDone = true; effectTime = finishTime = 0; }
 	bool BlocksWeapon( int now ) const { return !effectDone || now < finishTime; }
+	reachActionKind_t CurrentKind( int now ) const { return BlocksWeapon( now ) ? kind : REACH_ACTION_NONE; }
 	bool Begin( reachActionKind_t requested, int now, int windupMS, int recoveryMS ) {
 		if ( requested == REACH_ACTION_NONE || BlocksWeapon( now ) ) { return false; }
 		kind = requested;

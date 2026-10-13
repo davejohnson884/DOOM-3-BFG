@@ -16,6 +16,8 @@ on:
       - 'tools/reach/Start-*.cmd'
       - 'tools/reach/reach_prototype.cfg'
       - 'tools/reach/PLAYTEST.md'
+      - 'tools/reach/assets/**'
+      - 'tools/reach/Build-Reach-rifle.cmd'
   workflow_dispatch:
 
 permissions:
@@ -46,6 +48,26 @@ jobs:
       - name: Build Win32 Release
         shell: pwsh
         run: ./tools/reach/build-windows.ps1 -Toolset v143
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build and validate standalone asset converter
+        shell: pwsh
+        run: |
+          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/reach/assets/test_conversion.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachAssetConvert --paths tools/reach/assets --add-data "tools/reach/assets/reach_ar.script:." --distpath build/reach-playtest --workpath build/asset-pyinstaller --specpath build tools/reach/assets/convert_reach.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/reach-playtest/ReachAssetConvert.exe --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item tools/reach/Build-Reach-rifle.cmd, tools/reach/Start-Reach-rifle.cmd, tools/reach/Start-Reach-rifle-stock.cmd, tools/reach/assets/RIFLE.md build/reach-playtest/
+          New-Item -ItemType Directory build/reach-playtest/licenses -Force | Out-Null
+          Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-playtest/licenses/Reclaimer.txt
+          Copy-Item tools/reach/assets/rmf_reader/UPSTREAM.md build/reach-playtest/licenses/Reclaimer-source.md
+          python tools/reach/assets/copy_licenses.py build/reach-playtest/licenses
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload build diagnostics
         if: always()
         uses: actions/upload-artifact@v4

@@ -2,6 +2,8 @@
 param(
     [string]$BfgPath = 'C:\Program Files (x86)\Steam\steamapps\common\DOOM 3 BFG Edition',
     [string]$SavedGamesDirectory = '',
+    [switch]$ReachRifle,
+    [switch]$RetailRifle,
     [switch]$Windowed,
     [switch]$FlushLog,
     [switch]$SingleThreaded,
@@ -17,15 +19,24 @@ trap {
 $package = $PSScriptRoot
 $binary = Join-Path $package 'Doom3BFG.exe'
 $hashFile = Join-Path $package 'build-sha256.json'
-if (-not (Test-Path -LiteralPath $binary) -or -not (Test-Path -LiteralPath $hashFile)) {
+if (-not $RetailRifle -and (-not (Test-Path -LiteralPath $binary) -or -not (Test-Path -LiteralPath $hashFile))) {
     throw 'Extract the complete reach-bfg-win32 artifact before running this launcher.'
 }
-$expected = Get-Content -LiteralPath $hashFile -Raw | ConvertFrom-Json
-$binaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
-if ($binaryHash -ine $expected.sha256) {
+if (-not $RetailRifle) {
+    $expected = Get-Content -LiteralPath $hashFile -Raw | ConvertFrom-Json
+    $binaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
+} else {
+    if (-not $ReachRifle -or $StockCombat -or $SingleThreaded) { throw 'Retail preview requires -ReachRifle with stock threading.' }
+}
+if (-not $RetailRifle -and $binaryHash -ine $expected.sha256) {
     throw 'The executable does not match this build package. Download and extract the artifact again.'
 }
 $install = (Resolve-Path -LiteralPath $BfgPath).Path.TrimEnd('\')
+if ($RetailRifle) {
+    $binary = Join-Path $install 'Doom3BFG.exe'
+    if (-not (Test-Path -LiteralPath $binary)) { throw 'The installed Steam BFG executable was not found.' }
+    $binaryHash = (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash
+}
 if ($package -ieq $install -or $package.StartsWith($install + '\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'Extract the playtest package outside your Steam game installation.'
 }
@@ -76,6 +87,7 @@ public static class ReachDesktop {
     Write-Host "Display: borderless fullscreen, $($bounds.Width) x $($bounds.Height)"
 }
 $logMode = if ($FlushLog) { 2 } else { 1 }
+if ($RetailRifle -and -not $Diagnostics) { $logMode = 0 }
 $session = Join-Path $package ('playtest-' + [Guid]::NewGuid().ToString('N'))
 $profile = Join-Path $session 'profile'
 $mod = Join-Path $profile 'reach_lab'
@@ -87,12 +99,41 @@ if (Test-Path -LiteralPath $originalProfile -PathType Container) {
     $backup = Join-Path $session 'backup-original-profile'
     Copy-Item -LiteralPath $originalProfile -Destination $backup -Recurse
     Write-Host "Original profile snapshot: $backup"
+    if ($RetailRifle) {
+        $stockConfig = Join-Path $originalProfile 'base/D3BFGConfig.cfg'
+        if (Test-Path -LiteralPath $stockConfig) {
+            New-Item -ItemType Directory -Path (Join-Path $profile 'base') -Force | Out-Null
+            Copy-Item -LiteralPath $stockConfig -Destination (Join-Path $profile 'base/D3BFGConfig.cfg')
+        }
+    }
 }
 Copy-Item -LiteralPath (Join-Path $package 'reach_prototype.cfg') -Destination (Join-Path $mod 'reach_prototype.cfg')
+if ($ReachRifle) {
+    if ($StockCombat -or $SingleThreaded) { throw 'The rifle launcher uses Reach combat with normal stock threading.' }
+    $assetPointer = Join-Path $package 'reach-weapon-data.path'
+    if (-not (Test-Path -LiteralPath $assetPointer)) { throw 'Run Build-Reach-rifle.cmd with your collected donor ZIP/folder first.' }
+    $assets = (Resolve-Path -LiteralPath ((Get-Content -LiteralPath $assetPointer -Raw).Trim())).Path
+    foreach ($required in @('validation-report.json', 'weapon-tuning.json', 'def/weapon_machinegun.def', 'script/weapon_machinegun.script')) {
+        if (-not (Test-Path -LiteralPath (Join-Path $assets $required))) { throw "Missing converted weapon file: $required" }
+    }
+    $validation = Get-Content -LiteralPath (Join-Path $assets 'validation-report.json') -Raw | ConvertFrom-Json
+    if ($validation.clips -lt 25 -or $validation.framesChecked -lt 844) { throw 'The rifle conversion did not pass its animation checks.' }
+    foreach ($directory in @('models', 'materials', 'textures', 'sound', 'def', 'script')) {
+        Copy-Item -LiteralPath (Join-Path $assets $directory) -Destination $mod -Recurse
+    }
+    if ($RetailRifle) {
+        Copy-Item -LiteralPath (Join-Path $assets 'stock-script/weapon_machinegun.script') -Destination (Join-Path $mod 'script/weapon_machinegun.script') -Force
+    }
+    Write-Host 'Converted Reach AR, original clips and sounds copied to the new isolated lab.'
+}
 $mode = if ($StockCombat) { 'stock-combat' } else { 'reach-combat' }
 $threadMode = if ($SingleThreaded) { 'single-threaded' } else { 'normal-threading' }
 $config = @('echo "[ReachDiag] binary ' + $binaryHash.Substring(0, 12) + ' ' + $mode + ' ' + $threadMode + '"')
-if ($StockCombat) {
+if ($RetailRifle) {
+    $config += 'bind SHIFT _speed'
+    $combatArguments = ''
+    if (-not $Windowed) { $displayArguments = '' }
+} elseif ($StockCombat) {
     $config += 'set g_reachCombat 0'
     $combatArguments = '+set g_reachCombat 0 +set g_reachLabAutoConfig 0'
 } else {
@@ -109,6 +150,7 @@ $startArguments = '+set fs_basepath "' + $install + '" +set fs_savepath "' + $pr
     '" +set fs_game reach_lab +set com_allowConsole 1 ' + $displayArguments +
     ' +set com_skipIntroVideos 1 +set logFile ' + $logMode + ' +set logFileName "' + $consoleLog + '" +set com_timestampPrints 1' +
     ' +set com_reachDiagnostics ' + $diagnosticMode + ' ' + $threadArguments + ' ' + $combatArguments
+if ($ReachRifle) { $startArguments += ' +set fs_resourceLoadPriority 0' }
 # WinMain tokenizes the entire command line through idCmdArgs (64 arguments).
 if ([regex]::Matches($startArguments, '"[^"]*"|\S+').Count -gt 64) {
     throw 'The launch arguments exceed the engine parser limit. Move optional settings into a config file.'
@@ -129,7 +171,8 @@ if ($Diagnostics) {
     } catch { Write-Host "Hardware information unavailable: $($_.Exception.Message)" }
 }
 $launchTime = Get-Date
-$process = Start-Process -FilePath $binary -WorkingDirectory $package -ArgumentList $startArguments -PassThru
+$workingDirectory = if ($RetailRifle) { $install } else { $package }
+$process = Start-Process -FilePath $binary -WorkingDirectory $workingDirectory -ArgumentList $startArguments -PassThru
 $process.Handle | Out-Null
 if ($Diagnostics) {
     while (-not $process.WaitForExit(2000)) {

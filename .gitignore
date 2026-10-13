@@ -8,3 +8,7 @@
 /tools/reach/assets/reach-assets-*.zip*
 /tools/reach/assets/bin/
 /tools/reach/assets/obj/
+/tools/reach/assets/**/__pycache__/
+/tools/reach/assets/__pycache__/
+/tools/reach/assets/reach-weapon-data*/
+/tools/reach/assets/reach-weapon-data.path
