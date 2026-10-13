@@ -3,7 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text;
+using Encoding = System.Text.Encoding;
 using Newtonsoft.Json;
 using Reclaimer.Blam.Common;
 using Reclaimer.Blam.HaloReach;
@@ -208,6 +208,18 @@ internal static class Program
         var directory = Path.Combine(bundle, "animations", SafeName(graphName));
         Directory.CreateDirectory(directory);
         var exporter = new ExtractAnimationCommand(cache, graph);
+        foreach (var entry in graph.Animations)
+        {
+            if (entry.AnimationDataBlock == null || entry.AnimationDataBlock.Count == 0) continue;
+            entry.AnimationData = entry.AnimationDataBlock[0];
+            var type = entry.AnimationData.AnimationTypeReach;
+            entry.AnimationData.AnimationType = type == ModelAnimationGraph.FrameTypeReach.None ? ModelAnimationGraph.FrameType.Base : (ModelAnimationGraph.FrameType)(type - 1);
+        }
+        // Resolve bind poses once per graph, rather than rescanning every render model for every clip.
+        var defaults = AnimationDefaultNodeHelper.GetNodeDefaultValues(cache, graph);
+        SaveJson(Path.Combine(directory, "default-nodes.json"), defaults);
+        if (defaults.Any(n => !float.IsFinite(n.Scale) || n.Scale <= 0 || !float.IsFinite(n.Rotation.LengthSquared()) || n.Rotation.LengthSquared() < 0.5f))
+            throw new InvalidDataException("The animation graph has missing/invalid default model nodes; raw data was retained.");
         var records = new List<object>();
         for (int i = 0; i < graph.Animations.Count; i++) {
             var index = i;
@@ -217,11 +229,31 @@ internal static class Program
                 Errors.Add("Unsafe animation name skipped: index " + index); continue;
             }
             Attempt("animation " + name, () => {
-                var before = Directory.GetFiles(directory).ToHashSet();
-                exporter.Execute([index.ToString(CultureInfo.InvariantCulture), directory]);
-                var written = Directory.GetFiles(directory).Where(f => !before.Contains(f)).ToArray();
-                if (written.Length == 0) throw new InvalidDataException("No clip was produced (inherited or unsupported data).");
-                records.Add(new { name, index, source = graph.Animations[index], files = written.Select(Path.GetFileName) });
+                var entry = graph.Animations[index];
+                if (entry.AnimationData == null) throw new InvalidDataException("Inherited clip; see captured shared/parent graph.");
+                var data = exporter.BuildAnimationResourceData(entry) ?? throw new InvalidDataException("Unsupported animation resource.");
+                var animation = new TagTool.Animations.Animation(defaults, data);
+                var type = entry.AnimationData.AnimationType;
+                var world = entry.AnimationData.InternalFlags.HasFlag(ModelAnimationGraph.Animation.InternalFlagsValue.WorldRelative);
+                var extension = animation.GetAnimationExtension((int)type, (int)entry.AnimationData.FrameInfoType, world);
+                // Use the upstream overlay/replacement composition, with per-clip failure isolation.
+                if (type is ModelAnimationGraph.FrameType.Overlay or ModelAnimationGraph.FrameType.Replacement)
+                {
+                    var baseEntry = exporter.GetBaseAnimation(name);
+                    if (baseEntry != null)
+                    {
+                        var baseData = exporter.BuildAnimationResourceData(baseEntry) ?? throw new InvalidDataException("The required base animation could not be decoded.");
+                        var baseAnimation = new TagTool.Animations.Animation(defaults, baseData);
+                        if (type == ModelAnimationGraph.FrameType.Overlay) { animation.Overlay(baseAnimation); animation.InsertBaseFrame(baseAnimation); }
+                        else animation.Replace(baseAnimation);
+                    }
+                    else if (type == ModelAnimationGraph.FrameType.Overlay) { animation.Overlay(); animation.InsertBaseFrame(); }
+                    else throw new InvalidDataException("Replacement clip has no decoded base animation.");
+                }
+                var file = index.ToString("D4") + "_" + SafeName(name.Replace(':', ' ')) + "." + extension;
+                Console.WriteLine("Exporting animation: " + name);
+                animation.Export(Path.Combine(directory, file));
+                records.Add(new { name, index, source = entry, files = new[] { file } });
             });
         }
         SaveJson(Path.Combine(directory, "animation-events.json"), records);
