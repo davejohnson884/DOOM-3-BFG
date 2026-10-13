@@ -34,4 +34,6 @@ Set-Content $script '// unrelated script'
 $unrelatedHash = (Get-FileHash $script -Algorithm SHA256).Hash
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $helper
 if ($LASTEXITCODE -eq 0 -or (Get-FileHash $script -Algorithm SHA256).Hash -ne $unrelatedHash) { throw 'Repair accepted or modified an unrelated script.' }
+# The rejection above is expected; do not export its exit code to CI's wrapper.
+$global:LASTEXITCODE = 0
 Write-Host '::notice title=Rifle script repair::PASS: automatic folder lookup, exact local rename, original backup, repeated run and unrelated-script rejection'
