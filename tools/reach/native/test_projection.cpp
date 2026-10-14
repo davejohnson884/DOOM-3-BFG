@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+// Reproduce the actual Doom Str.h restriction around the standalone helper.
+#define strcmp DOOM_REQUIRES_IDSTR_CMP
 #include "WeaponProjection.h"
+#undef strcmp
 #include <array>
 #include <cstdio>
 #include <cstdlib>

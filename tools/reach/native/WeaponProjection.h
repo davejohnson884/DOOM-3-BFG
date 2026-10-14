@@ -3,10 +3,20 @@
 #define REACH_WEAPON_PROJECTION_H
 
 #include <cmath>
-#include <cstring>
 
 namespace ReachProjection
 {
+
+inline bool ModelNamed( const char* model, const char* expected )
+{
+	// Doom's precompiled headers redefine strcmp, including qualified uses.
+	while( *model != '\0' && *model == *expected )
+	{
+		++model;
+		++expected;
+	}
+	return *model == *expected;
+}
 
 inline bool Eligible( const char* model, bool tagged, bool depthHack,
 	int allowedView, int currentView, bool subview, bool mirror )
@@ -16,8 +26,8 @@ inline bool Eligible( const char* model, bool tagged, bool depthHack,
 	{
 		return false;
 	}
-	return std::strcmp( model, "models/md5/weapons/reach_ar/view.md5mesh" ) == 0 ||
-		std::strcmp( model, "reach_ar_flash.prt" ) == 0;
+	return ModelNamed( model, "models/md5/weapons/reach_ar/view.md5mesh" ) ||
+		ModelNamed( model, "reach_ar_flash.prt" );
 }
 
 // The reference is horizontal FOV at 4:3, matching Source's weapon convention.
