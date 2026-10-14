@@ -98,11 +98,14 @@ class PackageChecks(unittest.TestCase):
     def test_diagnostic_update_is_script_only_and_preserves_previous_archive(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp)/'update.zip'
-            build_switch_diagnostic(output)
+            capture = Path(temp)/'ReachDebugLog.exe'
+            capture.write_bytes(b'MZ capture packaging fixture')
+            build_switch_diagnostic(output, capture)
             before = output.read_bytes()
             with zipfile.ZipFile(output) as outer:
                 self.assertIsNone(outer.testzip())
-                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'Play-Reach-diagnostic.cmd', 'REACH-SWITCH-DIAGNOSTIC.txt', 'PROJECT-GPL.txt'})
+                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'Play-Reach-diagnostic.cmd', 'REACH-SWITCH-DIAGNOSTIC.txt', 'PROJECT-GPL.txt', 'ReachDebugLog.exe', 'ReachDebugLog.cs'})
+                self.assertEqual(outer.read('ReachDebugLog.exe'), capture.read_bytes())
                 with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
                     self.assertIsNone(inner.testzip())
                     self.assertEqual(set(inner.namelist()), set(PAYLOAD))
@@ -112,7 +115,7 @@ class PackageChecks(unittest.TestCase):
                 self.assertGreater('zzzz_reach_switch.pk4', 'zzz_reach_ar.pk4')
                 launcher = outer.read('Play-Reach-diagnostic.cmd').decode()
                 self.assertNotRegex(launcher, r'(?i)(powershell|r_fullscreen|r_window|com_smp|jobs_numThreads|r_useParallel|fs_basepath|fs_savepath|fs_resourceLoadPriority)')
-            with self.assertRaises(FileExistsError): build_switch_diagnostic(output)
+            with self.assertRaises(FileExistsError): build_switch_diagnostic(output, capture)
             self.assertEqual(output.read_bytes(), before)
 
 
