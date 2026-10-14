@@ -1,0 +1,14 @@
+{
+  "dxc": {
+    "url": "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.8.2405/dxc_2024_05_24.zip",
+    "sha256": "8d2656e9523e7b3b7c41159237d74f89cc98034056f61f568b8841da0449c965"
+  },
+  "ispc": {
+    "url": "https://github.com/ispc/ispc/releases/download/v1.23.0/ispc-v1.23.0-windows.zip",
+    "sha256": "709350902381968ee58fd67e9aed63df99b1313bc55a94195977bcc8d90bdced"
+  },
+  "vulkan_exports": {
+    "url": "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Loader/f8616928ee19f6c7fd648c1cf1f456cba3771855/loader/vulkan-1.def",
+    "sha256": "166014c0b24e6d6b728a05fed1ea4b6a123ed2ac5d98f63f3a176da4e93ed75d"
+  }
+}
