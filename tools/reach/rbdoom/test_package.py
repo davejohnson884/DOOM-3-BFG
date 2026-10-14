@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import math
 import re
 import tempfile
 import unittest
@@ -15,6 +16,45 @@ from presentation import entries as presentation_entries
 
 
 class PackageChecks(unittest.TestCase):
+    def test_view_pose_uses_additive_model_space_rotation(self):
+        script = (ROOT/'reach_machinegun.script').read_text()
+        body = re.search(r'void weapon_machinegun::ReachApplyViewPose\(\)\s*\{(.*?)\n\}', script, re.S)[1]
+        call = re.search(r"setJointAngle\(reach_root_joint,\s*(\w+),\s*'([^']+)'\)", body)
+        self.assertIsNotNone(call)
+        self.assertEqual(call[1], 'JOINTMOD_WORLD', 'Override loses the donor root orientation; LOCAL rotates around its rolled axes')
+        self.assertIn('getJointHandle("origin")', body)
+        self.assertIn('if (reach_root_joint >= 0)', body)
+        for state in ('init', 'Raise'):
+            state_body = re.search(r'void weapon_machinegun::'+state+r'\(\)\s*\{(.*?)\n\}', script, re.S)[1]
+            self.assertIn('ReachApplyViewPose();', state_body)
+        self.assertNotRegex(script, r'\b(?:setJointPos|setcvar)\s*\(')
+
+        # The actual engine WORLD branch post-multiplies row-axis matrices.
+        # In conventional column coordinates this composes correction * source.
+        repo = ROOT.parents[2]
+        native = (repo/'neo/d3xp/anim/Anim_Blend.cpp').read_text()
+        root = native[native.index('// check if we need to modify the origin'):]
+        self.assertRegex(root, r'case JOINTMOD_WORLD:\s*joints\[0\].SetRotation\( joints\[0\].ToMat3\(\) \* jointMod->mat \);')
+        pitch, yaw, roll = map(math.radians, map(float, call[2].split()))
+        cp, sp, cy, sy, cr, sr = math.cos(pitch), math.sin(pitch), math.cos(yaw), math.sin(yaw), math.cos(roll), math.sin(roll)
+        correction = [[cy*cp, cy*sp*sr-sy*cr, cy*sp*cr+sy*sr],
+                      [sy*cp, sy*sp*sr+cy*cr, sy*sp*cr-cy*sr],
+                      [-sp, cp*sr, cp*cr]]
+        source_root = [[1, 0, 0], [0, 0, -1], [0, 1, 0]]
+        def mm(a, b): return [[sum(a[i][k]*b[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+        def mv(a, v): return [sum(a[i][k]*v[k] for k in range(3)) for i in range(3)]
+        combined = mm(correction, source_root)
+        for child_point in ([20, 4, 3], [4, -8, 2], [0, 1, 0]):
+            expected = mv(correction, mv(source_root, child_point))
+            actual = mv(combined, child_point)
+            for a, b in zip(actual, expected): self.assertAlmostEqual(a, b)
+            self.assertAlmostEqual(sum(a*a for a in actual), sum(a*a for a in child_point))
+        # These common mistakes are observably different with a nonidentity root.
+        point = [20, 4, 3]
+        expected = mv(combined, point)
+        self.assertGreater(sum(abs(a-b) for a, b in zip(expected, mv(correction, point))), 1)
+        self.assertGreater(sum(abs(a-b) for a, b in zip(expected, mv(mm(source_root, correction), point))), .01)
+
     def test_controller_spawn_classes_are_registered_and_concrete(self):
         # A valid name can still be an abstract class that fatally rejects Spawn.
         repo = Path(__file__).resolve().parents[3]

@@ -1,4 +1,4 @@
-Reach rifle presentation and input/impact update r6
+Reach rifle resting pose update r7
 
 Close the game. Extract this ZIP beside RBDoom3BFG.exe and Play-Reach.cmd.
 Merge the reach folders and replace reach/zzzz_reach_switch.pk4 and both
@@ -6,15 +6,19 @@ Play-Reach CMD files when prompted.
 Launch normally with Play-Reach.cmd, select the rifle in a fresh map,
 and check the counter at 32 rounds, after firing, and after reloading.
 
-The r4 forward shift exposed too much of the stock and arms in the owner's
-idle screenshot. This update pulls the entire rig 6 units closer to the
-camera and puts it farther right/lower: its offset is now 2 forward,
-4 right and 2 down. This aims to crop the rear stock and arms against the
-viewport edge and place the counter in the lower-right area, guided by the
-owner's Xbox360 Reach reference. This remains an approximation: the Reach
-and Doom screenshots have different aspect ratios and camera FOVs. It
-needs visual comparison in game. World FOV and other weapons are untouched.
-The original rig, mesh proportions, imported clips and muzzle joints remain.
+The previous offset exposed too much receiver/stock and arm geometry. This
+update moves the entire rig 11 units closer than r6 and adds a small resting
+angle correction: 2 degrees pitch and -2 degrees yaw. The inherited model
+offset is now (-9, 0.5, -0.9). The angle uses RBDoom's existing additive
+model-space root-joint event, preserving the original root orientation and
+all animation motion. Muzzle markers and hands follow the same correction.
+
+16:9 is the reference layout. A 3440x1440 display keeps RBDoom's normal
+aspect handling; this update does not force a resolution/aspect/FOV. The
+owner reports that world FOV changes leave the weapon fixed. No FOV-based
+weapon adjustment is included. This is a reference-guided pose correction,
+not a verified reproduction of Reach's first-person projection. Check idle,
+firing, reload and sprint framing in game. Other Doom weapons are untouched.
 
 The display uses an authored skin remap that omits the shattered-glass
 stage. The digit materials now translate before scaling, matching the
@@ -27,7 +31,9 @@ Shift sprint and V melee. V is implemented; its latest input path still
 needs verification. G quick grenades are not implemented yet.
 If V still does nothing, use the included Play-Reach-diagnostic.cmd with
 your existing ReachDebugLog.exe, select the rifle, press V twice, then quit
-and upload Reach-weapon-debug.log. New traces show trigger/queue/melee stages.
+and upload Reach-weapon-debug.log. The log includes r7 pose/settings and
+trigger/queue/melee traces. This update does not claim to repair the
+still-unverified V input issue.
 
 Fast imported bullets previously kept Doom's bullet mass, yielding 50 times
 the stock launch momentum. Before the native launch, this update reduces
@@ -37,4 +43,4 @@ movable object for excessive shoving; exact reactions need an in-game check.
 
 Send a new idle screenshot showing the counter and the whole weapon view.
 If something fails, the existing diagnostic launcher still captures the log.
-To revert this framing change, reapply the previous r4 presentation ZIP.
+To revert this pose change, reapply the previous r6 presentation ZIP.
