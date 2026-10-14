@@ -18,7 +18,7 @@ gameplay and stability still need an in-game check.
 If another problem occurs, the existing Play-Reach-diagnostic.cmd and
 ReachDebugLog.exe still work. Upload its Reach-weapon-debug.log.
 The current update identifies itself as ReachSwitch r5 and includes the
-presentation changes: rifle rig forward2/right1/down1, a clean display skin
+presentation changes: rifle rig forward2/right4/down2, a clean display skin
 without the shattered-glass stage, and corrected digit texture transforms.
 World FOV is unchanged; the framing adjustment needs an in-game screenshot.
 

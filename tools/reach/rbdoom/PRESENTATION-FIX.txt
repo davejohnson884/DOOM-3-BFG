@@ -7,11 +7,12 @@ and check the counter at 32 rounds, after firing, and after reloading.
 
 The r4 forward shift exposed too much of the stock and arms in the owner's
 idle screenshot. This update pulls the entire rig 6 units closer to the
-camera: its offset is now 2 forward, 1 right and 1 down. This aims to crop
-the rear of the rifle and arms naturally against the edge of the viewport.
-The adjustment follows the owner's screenshot and needs visual comparison
-in game; it is not a claim of exact Reach camera/FOV matching. World FOV
-and other weapons are untouched.
+camera and puts it farther right/lower: its offset is now 2 forward,
+4 right and 2 down. This aims to crop the rear stock and arms against the
+viewport edge and place the counter in the lower-right area, guided by the
+owner's Xbox360 Reach reference. This remains an approximation: the Reach
+and Doom screenshots have different aspect ratios and camera FOVs. It
+needs visual comparison in game. World FOV and other weapons are untouched.
 The original rig, mesh proportions, imported clips and muzzle joints remain.
 
 The display uses an authored skin remap that omits the shattered-glass
