@@ -8,7 +8,7 @@ object reach_input_control {
 void reach_input_control::init() {
     reach_initialized = true;
     if (sys.getcvar("g_debugWeapon") == "1") {
-        sys.println("[ReachSwitch r2] melee controller constructor returned");
+        sys.println("[ReachSwitch r3] melee controller constructor returned");
     }
 }
 

@@ -33,6 +33,15 @@ jobs:
       - name: Check normal and diagnostic launchers
         shell: powershell
         run: ./tools/reach/rbdoom/test-launch.ps1
+      - name: Package controller spawn fix
+        shell: pwsh
+        run: python tools/reach/rbdoom/build_switch_fix.py build/Reach-rifle-switch-fix.zip
+      - name: Upload controller spawn fix
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-rifle-switch-fix
+          path: build/Reach-rifle-switch-fix.zip
+          if-no-files-found: error
       - name: Package script-only switch diagnostic
         shell: pwsh
         run: python tools/reach/rbdoom/build_switch_diagnostic.py build/Reach-switch-diagnostic.zip --capture-exe build/ReachDebugLog.exe

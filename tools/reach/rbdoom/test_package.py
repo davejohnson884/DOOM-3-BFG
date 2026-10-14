@@ -9,9 +9,41 @@ from pathlib import Path
 
 from package_reach import package, ROOT, digits, counter_material
 from build_switch_diagnostic import build as build_switch_diagnostic, PAYLOAD
+from build_switch_fix import build as build_switch_fix
 
 
 class PackageChecks(unittest.TestCase):
+    def test_controller_spawn_classes_are_registered_and_concrete(self):
+        # A valid name can still be an abstract class that fatally rejects Spawn.
+        repo = Path(__file__).resolve().parents[3]
+        registry = {}
+        for source in (repo/'neo/d3xp').rglob('*.cpp'):
+            text = re.sub(r'//[^\n]*|/\*.*?\*/', '', source.read_text(errors='replace'), flags=re.S)
+            for kind, name in re.findall(r'\b(CLASS_DECLARATION|ABSTRACT_DECLARATION)\s*\(\s*\w+\s*,\s*(\w+)\s*\)', text):
+                registry[name] = kind == 'CLASS_DECLARATION'
+        self.assertIs(registry['idEntity'], False)
+        spawn_classes = re.findall(r'"spawnclass"\s+"([^"]+)"', (ROOT/'reach_controls.def').read_text())
+        self.assertTrue(spawn_classes)
+        for name in spawn_classes:
+            self.assertIn(name, registry, 'Unregistered native spawn class: '+name)
+            self.assertTrue(registry[name], 'Cannot instantiate abstract native spawn class: '+name)
+
+    def test_switch_fix_replaces_existing_overlay_without_assets_or_executables(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)/'fix.zip'
+            build_switch_fix(output)
+            with zipfile.ZipFile(output) as outer:
+                self.assertIsNone(outer.testzip())
+                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'REACH-SWITCH-FIX.txt', 'PROJECT-GPL.txt'})
+                with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
+                    self.assertIsNone(inner.testzip())
+                    self.assertEqual(set(inner.namelist()), set(PAYLOAD))
+                    for target, source in PAYLOAD.items():
+                        self.assertEqual(inner.read(target), (ROOT/source).read_bytes())
+            previous = output.read_bytes()
+            with self.assertRaises(FileExistsError): build_switch_fix(output)
+            self.assertEqual(output.read_bytes(), previous)
+
     def assets(self, root):
         assets = root/'converted'; assets.mkdir()
         (assets/'validation-report.json').write_text(json.dumps({'clips': 25, 'framesChecked': 844}))

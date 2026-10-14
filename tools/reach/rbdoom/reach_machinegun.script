@@ -35,7 +35,7 @@ object weapon_machinegun : weapon_base {
 };
 
 void weapon_machinegun::init() {
-    sys.println("[ReachSwitch r2] constructor entered; g_debugWeapon=" + sys.getcvar("g_debugWeapon"));
+    sys.println("[ReachSwitch r3] constructor entered; g_debugWeapon=" + sys.getcvar("g_debugWeapon"));
     reach_pending_melee = 0;
     reach_action_locked = 0;
     reach_sprinting = 0;
@@ -55,7 +55,7 @@ void weapon_machinegun::init() {
 
 void weapon_machinegun::ReachTrace(string reach_message) {
     if (sys.getcvar("g_debugWeapon") == "1") {
-        sys.println("[ReachSwitch r2] " + reach_message);
+        sys.println("[ReachSwitch r3] " + reach_message);
     }
 }
 

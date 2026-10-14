@@ -1,5 +1,5 @@
 entityDef reach_input_control {
-    "spawnclass" "idEntity"
+    "spawnclass" "idSpawnableEntity"
     "scriptobject" "reach_input_control"
     "name" "reach_controls"
 }

@@ -1,4 +1,4 @@
-Reach rifle weapon-switch diagnostic r2
+Reach rifle weapon-switch diagnostic with corrected r3 scripts
 
 Close the game. Extract this ZIP into the same folder as RBDoom3BFG.exe
 and Play-Reach.cmd. Merge its reach folder with the existing reach folder.
@@ -24,7 +24,8 @@ initialization field to the controller and checks the controller and trigger
 independently when creating them. Stage messages identify the constructor,
 raise animation, first idle frame, control creation and first input checks.
 
-This is a diagnostic update; the cause of the reported lock is not confirmed.
+The owner r2 log found a fatal request to spawn abstract idEntity. The r3
+controller uses concrete idSpawnableEntity. Further gameplay needs testing.
 It preserves the released executable and its display/render/thread settings.
 The launcher uses the temporary debug-output reader and enables mod/logging.
 Normal play still uses Play-Reach.cmd, which does not enable these diagnostics.

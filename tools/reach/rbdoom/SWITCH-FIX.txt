@@ -1,0 +1,24 @@
+Reach rifle switch fix r3
+
+Close the game. Extract this ZIP into the folder containing RBDoom3BFG.exe
+and Play-Reach.cmd. Merge the reach folders and replace
+reach/zzzz_reach_switch.pk4 when Windows asks.
+
+Launch normally with Play-Reach.cmd. Use a fresh single-player map, select
+the machinegun, and check firing, reload, Shift sprint and V melee.
+No asset conversion, new game executable or diagnostic reader is required.
+
+The owner debug log identified the fatal error exactly:
+Cannot instanciate abstract class idEntity.
+The melee controller now uses the engine's concrete idSpawnableEntity
+helper. The rifle assets and raise/idle animations had loaded successfully
+before that error. This update fixes that invalid spawn request; further
+gameplay and stability still need an in-game check.
+
+If another problem occurs, the existing Play-Reach-diagnostic.cmd and
+ReachDebugLog.exe still work. Upload its Reach-weapon-debug.log.
+The updated scripts identify themselves as ReachSwitch r3.
+
+This overlay contains project scripts/definitions only. No donor assets.
+Remove reach/zzzz_reach_switch.pk4 before installing a later complete mod
+package so an older overlay cannot override a newer package.
