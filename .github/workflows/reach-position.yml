@@ -1,0 +1,32 @@
+name: Reach rifle position overlay
+
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - 'tools/reach/position/**'
+      - '.github/workflows/reach-position.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Package and verify declaration-only position update
+        shell: pwsh
+        run: |
+          python tools/reach/position/build_position.py build/Reach-rifle-position-r9.zip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reach-rifle-position-r9
+          path: build/Reach-rifle-position-r9.zip
+          if-no-files-found: error
