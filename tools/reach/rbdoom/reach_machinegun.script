@@ -20,6 +20,7 @@ object weapon_machinegun : weapon_base {
     void ReachInstallControls();
     void ReachRequestMelee();
     void ReachAmmoDisplay();
+    void ReachPrepareRound();
     void EnterCinematic();
     void UpdateSkin();
     void init();
@@ -58,7 +59,7 @@ void weapon_machinegun::init() {
 
 void weapon_machinegun::ReachTrace(string reach_message) {
     if (sys.getcvar("g_debugWeapon") == "1") {
-        sys.println("[ReachSwitch r5] " + reach_message);
+        sys.println("[ReachSwitch r6] " + reach_message);
     }
 }
 
@@ -146,6 +147,7 @@ void weapon_machinegun::Idle() {
 void weapon_machinegun::Fire() {
     RecoverBloom();
     next_attack = sys.getTime() + rate;
+    ReachPrepareRound();
     launchProjectiles(1, spread_min + (spread_max - spread_min) * bloom, 0, 1, 1);
     bloom = bloom + 0.1;
     if (bloom > 1) { bloom = 1; }
@@ -159,6 +161,23 @@ void weapon_machinegun::Fire() {
         waitFrame();
     }
     weaponState("Idle", 1);
+}
+
+void weapon_machinegun::ReachPrepareRound() {
+    entity reach_round;
+    float reach_round_speed;
+    float reach_round_mass;
+    // LaunchProjectiles consumes this same native projectile; no extra round.
+    // idProjectile::Launch reads these keys before setting rigid-body mass.
+    reach_round = createProjectile();
+    if (reach_round != $null_entity) {
+        reach_round_speed = sys.vecLength(reach_round.getVectorKey("velocity"));
+        if (reach_round_speed > 7200) {
+            reach_round_mass = reach_round.getFloatKey("mass") * 7200 / reach_round_speed;
+            reach_round.setKey("mass", "" + reach_round_mass);
+        }
+        reach_round.setKey("push", "0");
+    }
 }
 
 void weapon_machinegun::Reload() {
@@ -213,6 +232,7 @@ void weapon_machinegun::Quick() {
     float reach_hit_time;
     float reach_done_time;
     boolean reach_hit_done;
+    ReachTrace("Quick melee entered");
     reach_action_locked = 1;
     reach_pending_melee = 0;
     reach_hit_done = false;
@@ -226,6 +246,7 @@ void weapon_machinegun::Quick() {
             weaponState("Lower", 2);
         }
         if (!reach_hit_done && sys.getTime() >= reach_hit_time) {
+            ReachTrace("melee contact event reached");
             melee();
             reach_hit_done = true;
         }
@@ -237,7 +258,11 @@ void weapon_machinegun::Quick() {
 }
 
 void weapon_machinegun::ReachRequestMelee() {
-    if (!reach_action_locked && !WEAPON_LOWERWEAPON) { reach_pending_melee = 1; }
+    ReachTrace("melee request entered");
+    if (!reach_action_locked && !WEAPON_LOWERWEAPON) {
+        reach_pending_melee = 1;
+        ReachTrace("melee request queued");
+    } else { ReachTrace("melee request suppressed while action locked or lowering"); }
 }
 
 void weapon_machinegun::ReachAmmoDisplay() {

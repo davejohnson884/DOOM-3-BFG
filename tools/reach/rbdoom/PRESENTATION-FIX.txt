@@ -1,7 +1,8 @@
-Reach rifle presentation update r5
+Reach rifle presentation and input/impact update r6
 
 Close the game. Extract this ZIP beside RBDoom3BFG.exe and Play-Reach.cmd.
-Merge the reach folders and replace reach/zzzz_reach_switch.pk4.
+Merge the reach folders and replace reach/zzzz_reach_switch.pk4 and both
+Play-Reach CMD files when prompted.
 Launch normally with Play-Reach.cmd, select the rifle in a fresh map,
 and check the counter at 32 rounds, after firing, and after reloading.
 
@@ -20,6 +21,19 @@ stage. The digit materials now translate before scaling, matching the
 engine's matrix multiplication order. The existing reconstructed digit
 atlas is reused. Original donor textures and geometry are not in this ZIP.
 Fire/reload/sprint/melee and the concrete controller spawn fix are retained.
+
+Play-Reach.cmd now explicitly loads reach_controls.cfg at startup, assigning
+Shift sprint and V melee. V is implemented; its latest input path still
+needs verification. G quick grenades are not implemented yet.
+If V still does nothing, use the included Play-Reach-diagnostic.cmd with
+your existing ReachDebugLog.exe, select the rifle, press V twice, then quit
+and upload Reach-weapon-debug.log. New traces show trigger/queue/melee stages.
+
+Fast imported bullets previously kept Doom's bullet mass, yielding 50 times
+the stock launch momentum. Before the native launch, this update reduces
+mass in proportion to speed and disables an additional push. Bullet speed,
+damage and Doom's global physics remain unchanged. Check an enemy and a
+movable object for excessive shoving; exact reactions need an in-game check.
 
 Send a new idle screenshot showing the counter and the whole weapon view.
 If something fails, the existing diagnostic launcher still captures the log.

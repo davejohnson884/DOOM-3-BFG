@@ -20,6 +20,8 @@ def build(output):
     with output.open('xb') as handle, zipfile.ZipFile(handle, 'w', zipfile.ZIP_DEFLATED) as archive:
         archive.writestr('reach/zzzz_reach_switch.pk4', inner.getvalue())
         archive.writestr('REACH-PRESENTATION-FIX.txt', (ROOT/'PRESENTATION-FIX.txt').read_bytes())
+        archive.writestr('Play-Reach.cmd', (ROOT/'Play-Reach.cmd').read_bytes())
+        archive.writestr('Play-Reach-diagnostic.cmd', (ROOT/'Play-Reach-diagnostic.cmd').read_bytes())
         archive.writestr('PROJECT-GPL.txt', (ROOT.parents[2]/'COPYING.txt').read_bytes())
 
 

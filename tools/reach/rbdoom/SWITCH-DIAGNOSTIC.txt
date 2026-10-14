@@ -1,4 +1,4 @@
-Reach rifle diagnostic with r5 presentation scripts
+Reach rifle diagnostic with r6 presentation/input/impact scripts
 
 Close the game. Extract this ZIP into the same folder as RBDoom3BFG.exe
 and Play-Reach.cmd. Merge its reach folder with the existing reach folder.
@@ -26,7 +26,9 @@ raise animation, first idle frame, control creation and first input checks.
 
 The owner r2 log found a fatal request to spawn abstract idEntity. The r3
 controller uses concrete idSpawnableEntity. Owner confirms r3 actions work.
-Current r5 scripts also apply the rifle framing and display-material update.
+Current r6 scripts also apply framing, display, explicit input config and
+bullet-momentum normalization. Press V twice after the rifle is ready to
+capture the melee trigger, request, action-state and contact stages.
 It preserves the released executable and its display/render/thread settings.
 The launcher uses the temporary debug-output reader and enables mod/logging.
 Normal play still uses Play-Reach.cmd, which does not enable these diagnostics.

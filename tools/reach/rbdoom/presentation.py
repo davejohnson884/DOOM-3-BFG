@@ -47,4 +47,5 @@ def material():
 def entries():
     return {'def/reach_presentation.def': MODEL_DEF.encode(),
             'skins/reach_presentation.skin': SKIN.encode(),
-            'materials/reach_presentation.mtr': material().encode()}
+            'materials/reach_presentation.mtr': material().encode(),
+            'reach_controls.cfg': b'bind SHIFT _speed\nbind V "trigger reach_melee_input"\nbind V\n'}

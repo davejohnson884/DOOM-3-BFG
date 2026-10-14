@@ -22,7 +22,7 @@ if not exist "%~dp0ReachDebugLog.exe" (
   exit /b 1
 )
 echo After closing the game, File Explorer will select Reach-weapon-debug.log.
-"%~dp0ReachDebugLog.exe" "%~dp0RBDoom3BFG.exe" "%TEMP%\Reach-weapon-debug.log" +set fs_game reach +set logFileName "%TEMP%\Reach-weapon-switch.log" +set logFile 2 +set g_debugWeapon 1
+"%~dp0ReachDebugLog.exe" "%~dp0RBDoom3BFG.exe" "%TEMP%\Reach-weapon-debug.log" +set fs_game reach +set logFileName "%TEMP%\Reach-weapon-switch.log" +set logFile 2 +set g_debugWeapon 1 +exec reach_controls.cfg
 if errorlevel 1 (
   pause
   exit /b 1

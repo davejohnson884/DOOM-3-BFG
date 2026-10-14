@@ -131,7 +131,7 @@ class PackageChecks(unittest.TestCase):
             build_presentation_fix(output)
             with zipfile.ZipFile(output) as outer:
                 self.assertIsNone(outer.testzip())
-                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'REACH-PRESENTATION-FIX.txt', 'PROJECT-GPL.txt'})
+                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'REACH-PRESENTATION-FIX.txt', 'PROJECT-GPL.txt', 'Play-Reach.cmd', 'Play-Reach-diagnostic.cmd'})
                 with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
                     self.assertIsNone(inner.testzip())
                     self.assertEqual(set(inner.namelist()), set(PAYLOAD) | set(presentation_entries()))
@@ -150,6 +150,9 @@ class PackageChecks(unittest.TestCase):
                     self.assertNotRegex(model, r'\b(mesh|anim|entityDef)\b')
                     self.assertNotRegex(script, r'\bsetcvar\s*\(')
                     self.assertIn('else { setSkin("reach_ar_clean_display"); }', script)
+                    config = inner.read('reach_controls.cfg').decode()
+                    self.assertIn('bind V "trigger reach_melee_input"', config)
+                    self.assertNotRegex(config, r'(g_fov|g_gun|r_fullscreen|jobs_numThreads|com_smp)')
             previous = output.read_bytes()
             with self.assertRaises(FileExistsError): build_presentation_fix(output)
             self.assertEqual(output.read_bytes(), previous)
@@ -168,8 +171,22 @@ class PackageChecks(unittest.TestCase):
             variables = set(re.findall(r'\b(?:float|vector|entity|boolean|string)\s+(\w+)\s*(?=[;,\)])', stripped))
             self.assertEqual(variables & events, set())
             self.assertNotIn('scriptEvent', stripped)
-            object_events = set(re.findall(r'\b(?:sys|reach_player|reach_weapon)\.(\w+)\(', stripped))
+            object_events = set(re.findall(r'\b(?:sys|reach_player|reach_weapon|reach_round)\.(\w+)\(', stripped))
             self.assertEqual(object_events-events, set())
+
+    def test_native_round_preparation_preserves_launch_momentum(self):
+        # Native collision impulse depends on mass as well as imported speed.
+        # Check the actual script formula for stock and faster donor speeds.
+        text = (ROOT/'reach_machinegun.script').read_text()
+        host_speed = float(re.search(r'reach_round_mass\s*=\s*reach_round.getFloatKey\("mass"\)\s*\*\s*([0-9.]+)\s*/\s*reach_round_speed', text)[1])
+        for mass in (0.1, 1., 2.):
+            for speed in (host_speed, 360000., 720000.):
+                adjusted = mass * host_speed / speed
+                self.assertGreater(adjusted, 0)
+                self.assertAlmostEqual(adjusted*speed, mass*host_speed)
+        self.assertIn('reach_round.setKey("mass", "" + reach_round_mass);', text)
+        self.assertIn('reach_round.setKey("push", "0");', text)
+        self.assertNotRegex(text, r'reach_round.setKey\("(?:velocity|def_damage)"')
 
     def test_diagnostic_update_is_script_only_and_preserves_previous_archive(self):
         with tempfile.TemporaryDirectory() as temp:

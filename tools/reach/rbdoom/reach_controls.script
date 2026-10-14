@@ -8,18 +8,29 @@ object reach_input_control {
 void reach_input_control::init() {
     reach_initialized = true;
     if (sys.getcvar("g_debugWeapon") == "1") {
-        sys.println("[ReachSwitch r5] melee controller constructor returned");
+        sys.println("[ReachSwitch r6] melee controller constructor returned");
     }
 }
 
 void reach_input_control::ReachMelee() {
     entity reach_player;
     entity reach_weapon;
+    if (sys.getcvar("g_debugWeapon") == "1") {
+        sys.println("[ReachInput r6] melee trigger activated");
+    }
     reach_player = sys.getEntity("player1");
-    if (reach_player == $null_entity) { return; }
+    if (reach_player == $null_entity) {
+        if (sys.getcvar("g_debugWeapon") == "1") { sys.println("[ReachInput r6] player1 not found"); }
+        return;
+    }
+    if (sys.getcvar("g_debugWeapon") == "1") {
+        sys.println("[ReachInput r6] current weapon=" + reach_player.getCurrentWeapon());
+    }
     if (reach_player.getCurrentWeapon() != "weapon_machinegun" || reach_player.inPDA()) { return; }
     reach_weapon = reach_player.getWeaponEntity();
     if (reach_weapon != $null_entity && reach_weapon.hasFunction("ReachRequestMelee")) {
         reach_weapon.callFunction("ReachRequestMelee");
+    } else {
+        if (sys.getcvar("g_debugWeapon") == "1") { sys.println("[ReachInput r6] current weapon missing melee callback"); }
     }
 }

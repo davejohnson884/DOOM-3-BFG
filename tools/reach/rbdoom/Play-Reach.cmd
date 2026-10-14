@@ -11,4 +11,4 @@ if not exist "%~dp0reach\zzz_reach_ar.pk4" (
   pause
   exit /b 1
 )
-start "" /D "%~dp0" "%~dp0RBDoom3BFG.exe" +set fs_game reach
+start "" /D "%~dp0" "%~dp0RBDoom3BFG.exe" +set fs_game reach +exec reach_controls.cfg
