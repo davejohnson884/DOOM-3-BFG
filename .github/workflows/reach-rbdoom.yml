@@ -42,6 +42,15 @@ jobs:
           name: reach-rifle-switch-fix
           path: build/Reach-rifle-switch-fix.zip
           if-no-files-found: error
+      - name: Package rifle presentation update
+        shell: pwsh
+        run: python tools/reach/rbdoom/build_presentation_fix.py build/Reach-rifle-presentation-fix.zip
+      - name: Upload rifle presentation update
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-rifle-presentation-fix
+          path: build/Reach-rifle-presentation-fix.zip
+          if-no-files-found: error
       - name: Package script-only switch diagnostic
         shell: pwsh
         run: python tools/reach/rbdoom/build_switch_diagnostic.py build/Reach-switch-diagnostic.zip --capture-exe build/ReachDebugLog.exe

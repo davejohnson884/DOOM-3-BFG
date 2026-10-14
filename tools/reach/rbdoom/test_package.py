@@ -10,6 +10,8 @@ from pathlib import Path
 from package_reach import package, ROOT, digits, counter_material
 from build_switch_diagnostic import build as build_switch_diagnostic, PAYLOAD
 from build_switch_fix import build as build_switch_fix
+from build_presentation_fix import build as build_presentation_fix
+from presentation import entries as presentation_entries
 
 
 class PackageChecks(unittest.TestCase):
@@ -37,7 +39,7 @@ class PackageChecks(unittest.TestCase):
                 self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'REACH-SWITCH-FIX.txt', 'PROJECT-GPL.txt'})
                 with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
                     self.assertIsNone(inner.testzip())
-                    self.assertEqual(set(inner.namelist()), set(PAYLOAD))
+                    self.assertEqual(set(inner.namelist()), set(PAYLOAD) | set(presentation_entries()))
                     for target, source in PAYLOAD.items():
                         self.assertEqual(inner.read(target), (ROOT/source).read_bytes())
             previous = output.read_bytes()
@@ -104,11 +106,53 @@ class PackageChecks(unittest.TestCase):
             self.assertTrue(any(pixels))
             tiles.append(pixels)
         self.assertEqual(len(set(tiles)), 10)
-        for ammo in range(33):
-            ones = ammo % 10; tens = (ammo-ones)//10
-            for digit in (tens, ones):
-                self.assertAlmostEqual(.25*.2+digit/10-.05, digit/10)
-                self.assertAlmostEqual(.75*.2+digit/10-.05, (digit+1)/10)
+        # Evaluate the actual authored order, using the engine's post-multiply rule.
+        # The earlier scale-then-translate version incorrectly scaled the offset.
+        materials = [presentation_entries()['materials/reach_presentation.mtr'].decode(),
+                     counter_material('reach/ones { }\nreach/tens { }')]
+        for text in materials:
+            for name, parm in [('ones', 10), ('tens', 9)]:
+                body = re.search(r'reach/(?:rb_)?'+name+r'\s*\{(?:[^{}]|\{[^{}]*\})*\}', text, re.S)[0]
+                transforms = re.findall(r'\b(translate|scale)\s+([^,\n]+),\s*([^\n]+)', body)
+                self.assertEqual(len(transforms), 2)
+                for ammo in range(33):
+                    digit = ammo % 10 if name == 'ones' else ammo // 10
+                    slope, offset = 1., 0.
+                    for action, u, _ in transforms:
+                        value = digit/10 - .05 if u.strip() == 'parm'+str(parm)+' - 0.05' else float(u)
+                        if action == 'translate': offset += slope*value
+                        else: slope *= value
+                    self.assertAlmostEqual(.25*slope+offset, digit/10)
+                    self.assertAlmostEqual(.75*slope+offset, (digit+1)/10)
+
+    def test_presentation_overlay_dependencies_and_private_content_exclusion(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)/'presentation.zip'
+            build_presentation_fix(output)
+            with zipfile.ZipFile(output) as outer:
+                self.assertIsNone(outer.testzip())
+                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'REACH-PRESENTATION-FIX.txt', 'PROJECT-GPL.txt'})
+                with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
+                    self.assertIsNone(inner.testzip())
+                    self.assertEqual(set(inner.namelist()), set(PAYLOAD) | set(presentation_entries()))
+                    for name, value in presentation_entries().items(): self.assertEqual(inner.read(name), value)
+                    skin = inner.read('skins/reach_presentation.skin').decode()
+                    material = inner.read('materials/reach_presentation.mtr').decode()
+                    self.assertNotIn('glass_shattered', material)
+                    targets = re.findall(r'\breach/(?:display|ones|tens)\s+(reach/\w+)', skin)
+                    self.assertEqual(len(targets), 3)
+                    for target in targets: self.assertRegex(material, re.escape(target)+r'\s*\{')
+                    script = inner.read('script/weapon_machinegun.script').decode()
+                    model_name = re.search(r'setModel\("([^"]+)"\)', script)[1]
+                    model = inner.read('def/reach_presentation.def').decode()
+                    self.assertRegex(model, r'model\s+'+model_name+r'\s*\{')
+                    self.assertRegex(model, r'inherit\s+viewmodel_reach_ar\b')
+                    self.assertNotRegex(model, r'\b(mesh|anim|entityDef)\b')
+                    self.assertNotRegex(script, r'\bsetcvar\s*\(')
+                    self.assertIn('else { setSkin("reach_ar_clean_display"); }', script)
+            previous = output.read_bytes()
+            with self.assertRaises(FileExistsError): build_presentation_fix(output)
+            self.assertEqual(output.read_bytes(), previous)
 
     def test_script_variables_and_existing_event_interface(self):
         # Public stock engine events reject variable redeclarations (move was a real bug).
@@ -140,7 +184,7 @@ class PackageChecks(unittest.TestCase):
                 self.assertEqual(outer.read('ReachDebugLog.exe'), capture.read_bytes())
                 with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
                     self.assertIsNone(inner.testzip())
-                    self.assertEqual(set(inner.namelist()), set(PAYLOAD))
+                    self.assertEqual(set(inner.namelist()), set(PAYLOAD) | set(presentation_entries()))
                     for target, source in PAYLOAD.items():
                         self.assertEqual(inner.read(target), (ROOT/source).read_bytes())
                 # Released RBDoom scans sorted PK4 names in reverse order.

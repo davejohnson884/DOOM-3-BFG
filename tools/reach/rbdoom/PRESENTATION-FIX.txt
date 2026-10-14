@@ -1,0 +1,23 @@
+Reach rifle presentation update r4
+
+Close the game. Extract this ZIP beside RBDoom3BFG.exe and Play-Reach.cmd.
+Merge the reach folders and replace reach/zzzz_reach_switch.pk4.
+Launch normally with Play-Reach.cmd, select the rifle in a fresh map,
+and check the counter at 32 rounds, after firing, and after reloading.
+
+This update moves the rifle rig 8 units forward, 1 unit right and 1 unit
+down through an inherited model definition. It aims to reduce exaggerated
+perspective and the amount of screen covered by the rear receiver.
+The adjustment needs visual comparison in game; it is not a claim of
+exact Reach camera/FOV matching. World FOV and other weapons are untouched.
+The original rig, mesh proportions, imported clips and muzzle joints remain.
+
+The display uses an authored skin remap that omits the shattered-glass
+stage. The digit materials now translate before scaling, matching the
+engine's matrix multiplication order. The existing reconstructed digit
+atlas is reused. Original donor textures and geometry are not in this ZIP.
+Fire/reload/sprint/melee and the concrete controller spawn fix are retained.
+
+Send a new idle screenshot showing the counter and the whole weapon view.
+If something fails, the existing diagnostic launcher still captures the log.
+To revert this presentation update, reapply the previous r3 switch-fix ZIP.

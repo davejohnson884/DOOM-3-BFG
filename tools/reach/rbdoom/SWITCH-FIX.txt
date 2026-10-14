@@ -1,4 +1,4 @@
-Reach rifle switch fix r3
+Reach rifle switch and presentation update r4
 
 Close the game. Extract this ZIP into the folder containing RBDoom3BFG.exe
 and Play-Reach.cmd. Merge the reach folders and replace
@@ -17,7 +17,10 @@ gameplay and stability still need an in-game check.
 
 If another problem occurs, the existing Play-Reach-diagnostic.cmd and
 ReachDebugLog.exe still work. Upload its Reach-weapon-debug.log.
-The updated scripts identify themselves as ReachSwitch r3.
+The current update identifies itself as ReachSwitch r4 and includes the
+presentation changes: rifle rig forward8/right1/down1, a clean display skin
+without the shattered-glass stage, and corrected digit texture transforms.
+World FOV is unchanged; the framing adjustment needs an in-game screenshot.
 
 This overlay contains project scripts/definitions only. No donor assets.
 Remove reach/zzzz_reach_switch.pk4 before installing a later complete mod

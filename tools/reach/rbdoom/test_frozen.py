@@ -19,4 +19,7 @@ with tempfile.TemporaryDirectory() as temp:
             assert b'getReachPose' not in inner.read('script/weapon_machinegun.script')
             assert 'script/reach_controls.script' in inner.namelist()
             assert 'materials/reach_flash.mtr' in inner.namelist()
+            assert 'def/reach_presentation.def' in inner.namelist()
+            assert 'skins/reach_presentation.skin' in inner.namelist()
+            assert 'materials/reach_presentation.mtr' in inner.namelist()
     print('PASS: frozen executable created complete drop-in archive with bundled script templates and effects')

@@ -10,6 +10,7 @@ import zipfile
 from pathlib import Path
 
 from build_weapon import replace_keys
+from presentation import entries as presentation_entries
 
 ROOT = Path(getattr(sys, '_MEIPASS', Path(__file__).parent))
 CATEGORIES = ('models', 'materials', 'textures', 'sound', 'def')
@@ -99,8 +100,8 @@ def counter_material(text):
     {
         blend add
         map textures/reach/rb_digits.tga
-        scale 0.2, 1
         translate parmPARM - 0.05, 0
+        scale 0.2, 1
     }
 }'''.replace('NAME', name).replace('PARM', str(parm))
         text, count = pattern.subn(lambda _: replacement, text)
@@ -136,6 +137,7 @@ def package(assets, output):
     entries['def/reach_controls.def'] = (ROOT/'reach_controls.def').read_bytes()
     entries['script/weapon_machinegun.script'] = (ROOT/'reach_machinegun.script').read_bytes()
     entries['script/reach_controls.script'] = (ROOT/'reach_controls.script').read_bytes()
+    entries.update(presentation_entries())
     entries['materials/reach_ar.mtr'] = counter_material(entries['materials/reach_ar.mtr'].decode()).encode()
     entries['materials/reach_flash.mtr'] = effect_material().encode()
     entries['particles/reach_ar_flash.prt'] = PARTICLE.encode()

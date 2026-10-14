@@ -3,6 +3,7 @@ import argparse
 import io
 import zipfile
 from pathlib import Path
+from presentation import entries as presentation_entries
 
 ROOT = Path(__file__).resolve().parent
 PAYLOAD = {
@@ -21,6 +22,8 @@ def build(output, capture_exe):
     with zipfile.ZipFile(inner, 'w', zipfile.ZIP_DEFLATED) as archive:
         for target, source in PAYLOAD.items():
             archive.writestr(target, (ROOT/source).read_bytes())
+        for target, data in presentation_entries().items():
+            archive.writestr(target, data)
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open('xb') as handle, zipfile.ZipFile(handle, 'w', zipfile.ZIP_DEFLATED) as archive:
