@@ -58,7 +58,7 @@ void weapon_machinegun::init() {
 
 void weapon_machinegun::ReachTrace(string reach_message) {
     if (sys.getcvar("g_debugWeapon") == "1") {
-        sys.println("[ReachSwitch r4] " + reach_message);
+        sys.println("[ReachSwitch r5] " + reach_message);
     }
 }
 

@@ -2,7 +2,7 @@
 
 MODEL_DEF = '''model viewmodel_reach_ar_present {
     inherit viewmodel_reach_ar
-    offset ( 8 -1 -1 )
+    offset ( 2 -1 -1 )
 }
 '''
 
