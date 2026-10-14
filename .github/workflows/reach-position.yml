@@ -1,4 +1,4 @@
-name: Reach rifle position overlay
+name: Reach rifle pose overlay
 
 on:
   push:
@@ -20,13 +20,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Package and verify declaration-only position update
+      - name: Check counter pivot, script API and retained weapon logic
         shell: pwsh
         run: |
-          python tools/reach/position/build_position.py build/Reach-rifle-position-r9.zip
+          python tools/reach/position/test_pose.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package rifle-only rotation update
+        shell: pwsh
+        run: |
+          python tools/reach/position/build_pose.py build/Reach-rifle-pose-r10.zip
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
-          name: reach-rifle-position-r9
-          path: build/Reach-rifle-position-r9.zip
+          name: reach-rifle-pose-r10
+          path: build/Reach-rifle-pose-r10.zip
           if-no-files-found: error

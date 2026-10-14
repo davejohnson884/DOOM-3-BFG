@@ -1,0 +1,43 @@
+void weapon_machinegun::ReachApplyViewPose() {
+    float reach_root_joint;
+    vector reach_pose_angles;
+    vector reach_pose_pivot;
+    vector reach_pose_rotated_pivot;
+    vector reach_pose_shift;
+
+    // Keep the accepted projection tag and counter UV controls unchanged.
+    setShaderParm(6, 1);
+    reach_pose_angles = '0 0 -3';
+    if (sys.getcvar("reach_arPitch") != "") {
+        reach_pose_angles_x = sys.strToFloat(sys.getcvar("reach_arPitch"));
+    }
+    if (sys.getcvar("reach_arYaw") != "") {
+        reach_pose_angles_y = sys.strToFloat(sys.getcvar("reach_arYaw"));
+    }
+    if (sys.getcvar("reach_arRoll") != "") {
+        reach_pose_angles_z = sys.strToFloat(sys.getcvar("reach_arRoll"));
+    }
+
+    reach_root_joint = getJointHandle("origin");
+    if (reach_root_joint >= 0) {
+        // Rotate around the idle counter center rather than the camera/root.
+        // BFG's right vector is -Y: subtract it for the pivot's Y component.
+        reach_pose_pivot = '15.84341446 -4.47929218 0.28925242';
+        reach_pose_rotated_pivot = sys.angToForward(reach_pose_angles) * reach_pose_pivot_x
+            - sys.angToRight(reach_pose_angles) * reach_pose_pivot_y
+            + sys.angToUp(reach_pose_angles) * reach_pose_pivot_z;
+        reach_pose_shift = reach_pose_pivot - reach_pose_rotated_pivot;
+
+        // WORLD adds an orientation in model space, preserving the donor's
+        // nonidentity root. LOCAL adds a position instead of overriding it.
+        setJointAngle(reach_root_joint, JOINTMOD_WORLD, reach_pose_angles);
+        setJointPos(reach_root_joint, JOINTMOD_LOCAL, reach_pose_shift);
+    }
+    ReachTrace("r10 counter-centered rotation: pitch=" + reach_pose_angles_x
+        + " yaw=" + reach_pose_angles_y + " roll=" + reach_pose_angles_z);
+    if (sys.getcvar("g_debugWeapon") == "1") {
+        ReachTrace("model offset=(4 -4.2 -2.8); r_reachWeaponFov=" + sys.getcvar("r_reachWeaponFov"));
+        ReachTrace("host gun position: X=" + sys.getcvar("g_gunX") + " Y=" + sys.getcvar("g_gunY")
+            + " Z=" + sys.getcvar("g_gunZ") + " Scale=" + sys.getcvar("g_gunScale"));
+    }
+}
