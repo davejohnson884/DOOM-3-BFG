@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 from package_reach import package, ROOT, digits, counter_material
+from build_switch_diagnostic import build as build_switch_diagnostic, PAYLOAD
 
 
 class PackageChecks(unittest.TestCase):
@@ -88,11 +89,31 @@ class PackageChecks(unittest.TestCase):
         for name in ('reach_machinegun.script', 'reach_controls.script'):
             text = (ROOT/name).read_text()
             stripped = re.sub(r'//[^\n]*|/\*.*?\*/', '', text, flags=re.S)
-            variables = set(re.findall(r'\b(?:float|vector|entity|boolean|string)\s+(\w+)\s*;', stripped))
+            variables = set(re.findall(r'\b(?:float|vector|entity|boolean|string)\s+(\w+)\s*(?=[;,\)])', stripped))
             self.assertEqual(variables & events, set())
             self.assertNotIn('scriptEvent', stripped)
             object_events = set(re.findall(r'\b(?:sys|reach_player|reach_weapon)\.(\w+)\(', stripped))
             self.assertEqual(object_events-events, set())
+
+    def test_diagnostic_update_is_script_only_and_preserves_previous_archive(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)/'update.zip'
+            build_switch_diagnostic(output)
+            before = output.read_bytes()
+            with zipfile.ZipFile(output) as outer:
+                self.assertIsNone(outer.testzip())
+                self.assertEqual(set(outer.namelist()), {'reach/zzzz_reach_switch.pk4', 'Play-Reach-diagnostic.cmd', 'REACH-SWITCH-DIAGNOSTIC.txt', 'PROJECT-GPL.txt'})
+                with zipfile.ZipFile(io.BytesIO(outer.read('reach/zzzz_reach_switch.pk4'))) as inner:
+                    self.assertIsNone(inner.testzip())
+                    self.assertEqual(set(inner.namelist()), set(PAYLOAD))
+                    for target, source in PAYLOAD.items():
+                        self.assertEqual(inner.read(target), (ROOT/source).read_bytes())
+                # Released RBDoom scans sorted PK4 names in reverse order.
+                self.assertGreater('zzzz_reach_switch.pk4', 'zzz_reach_ar.pk4')
+                launcher = outer.read('Play-Reach-diagnostic.cmd').decode()
+                self.assertNotRegex(launcher, r'(?i)(powershell|r_fullscreen|r_window|com_smp|jobs_numThreads|r_useParallel|fs_basepath|fs_savepath|fs_resourceLoadPriority)')
+            with self.assertRaises(FileExistsError): build_switch_diagnostic(output)
+            self.assertEqual(output.read_bytes(), before)
 
 
 if __name__ == '__main__': unittest.main()

@@ -1,0 +1,27 @@
+Reach rifle weapon-switch diagnostic r1
+
+Close the game. Extract this ZIP into the same folder as RBDoom3BFG.exe
+and Play-Reach.cmd. Merge its reach folder with the existing reach folder.
+No asset conversion or replacement engine is needed.
+
+Double-click Play-Reach-diagnostic.cmd. Use a fresh single-player map and
+select the machinegun. If it locks, end RBDoom3BFG.exe using Task Manager.
+Once the game closes, File Explorer selects Reach-weapon-switch.log.
+Upload that log. You can also find it by opening %TEMP% in File Explorer.
+The diagnostic log is replaced each time this diagnostic launcher runs.
+
+This update moves melee-control creation out of the weapon constructor,
+until after the raise animation and one idle-frame yield. It adds a stored
+initialization field to the controller and checks the controller and trigger
+independently when creating them. Stage messages identify the constructor,
+raise animation, first idle frame, control creation and first input checks.
+
+This is a diagnostic update; the cause of the reported lock is not confirmed.
+It preserves the released executable and its display/render/thread settings.
+The launcher starts it directly and enables only mod selection and logging.
+Normal play still uses Play-Reach.cmd, which does not enable these diagnostics.
+
+To remove this update, close the game and remove only
+reach/zzzz_reach_switch.pk4 and Play-Reach-diagnostic.cmd.
+Remove the overlay PK4 before installing a later complete rifle package,
+so that an older diagnostic script cannot override a newer package.

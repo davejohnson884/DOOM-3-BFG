@@ -1,10 +1,15 @@
 // Ordinary script objects and map triggers; no native extensions or injection.
 object reach_input_control {
+    boolean reach_initialized;
     void init();
     void ReachMelee();
 };
 
 void reach_input_control::init() {
+    reach_initialized = true;
+    if (sys.getcvar("g_debugWeapon") == "1") {
+        sys.println("[ReachSwitch r1] melee controller constructor returned");
+    }
 }
 
 void reach_input_control::ReachMelee() {

@@ -30,6 +30,15 @@ jobs:
       - name: Check direct executable launcher
         shell: powershell
         run: ./tools/reach/rbdoom/test-launch.ps1
+      - name: Package script-only switch diagnostic
+        shell: pwsh
+        run: python tools/reach/rbdoom/build_switch_diagnostic.py build/Reach-switch-diagnostic.zip
+      - name: Upload script-only switch diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-switch-diagnostic
+          path: build/Reach-switch-diagnostic.zip
+          if-no-files-found: error
       - name: Build standalone private packager
         shell: pwsh
         run: |
