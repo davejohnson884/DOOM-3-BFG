@@ -1,4 +1,4 @@
-name: Reach RBDoom combat r13
+name: Reach RBDoom native input r14
 
 on:
   push:
@@ -42,6 +42,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & build/test_projection.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_quick_actions.cpp /Fe:build/test_quick_actions.exe /Fo:build/test_quick_actions.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_quick_actions.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Apply extension to the exact published source
         shell: pwsh
         run: python tools/reach/native/apply_rbdoom.py rbdoom
@@ -67,18 +71,18 @@ jobs:
         run: ./tools/reach/rbdoom/test-capture.ps1
       - name: Verify actual candidate CMD launch
         shell: powershell
-        run: ./tools/reach/native/test-candidate.ps1
+        run: ./tools/reach/native/test-input-launch.ps1
       - name: Package separate executable and asset-free overlay
         shell: pwsh
         run: |
           python tools/reach/native/check_combat.py rbdoom
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tools/reach/native/build_combat.py build/Reach-combat-r13.zip --engine rbdoom/build-reach/Release/RBDoom3BFG.exe --capture build/ReachDebugLog.exe --source rbdoom
+          python tools/reach/native/build_combat.py build/Reach-combat-r14.zip --engine rbdoom/build-reach/Release/RBDoom3BFG.exe --capture build/ReachDebugLog.exe --source rbdoom
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
-          name: reach-combat-r13
-          path: build/Reach-combat-r13.zip
+          name: reach-combat-r14
+          path: build/Reach-combat-r14.zip
           if-no-files-found: error
       - name: Preserve build evidence
         if: always()

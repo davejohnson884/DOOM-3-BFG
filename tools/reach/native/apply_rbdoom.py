@@ -20,7 +20,7 @@ def apply(root):
     if head != UPSTREAM:
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
-             'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h']
+             'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')
@@ -118,6 +118,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 				// turn off the light depth bounds test''', path)
 
     path = paths[3]
+    changed[path] = replace(changed[path], '#include "Game_local.h"',
+                            '#include "Game_local.h"\n#include "ReachQuickActions.h"', path)
     changed[path] = replace(changed[path],
         '\t\tconst idKeyValue* lkv = weaponDef->dict.MatchPrefix( "weapon_light", NULL );\n',
         '''		// Reach opt-in weapon projection: the candidate script tags its
@@ -170,17 +172,18 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 ''', path)
 
     # Reach opt-in weapon projection / quick actions. The retail trigger
-    # console command is cheat-protected; scripts receive ordinary user cvars.
-    # Only grenade inventory and casing velocity need native gameplay support.
+    # console command is cheat-protected; r14 reads native usercmd impulses.
     changed[path] = replace(changed[path],
         'const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );',
         'const idEventDef EV_ReachGrenadesAvailable( "reachGrenadesAvailable", NULL, \'f\' );\n'
         'const idEventDef EV_ReachThrowFrag( "reachThrowFrag", NULL, \'f\' );\n'
+        'const idEventDef EV_ReachQuickAction( "reachQuickAction", NULL, \'f\' );\n'
         'const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );', path)
     changed[path] = replace(changed[path],
         'EVENT( EV_Weapon_UseAmmo,',
         'EVENT( EV_ReachGrenadesAvailable, idWeapon::Event_ReachGrenadesAvailable )\n'
-        'EVENT( EV_ReachThrowFrag, idWeapon::Event_ReachThrowFrag )\nEVENT( EV_Weapon_UseAmmo,', path)
+        'EVENT( EV_ReachThrowFrag, idWeapon::Event_ReachThrowFrag )\n'
+        'EVENT( EV_ReachQuickAction, idWeapon::Event_ReachQuickAction )\nEVENT( EV_Weapon_UseAmmo,', path)
     changed[path] = replace(changed[path],
         'void idWeapon::Event_EjectBrass()\n',
         (ROOT/'ReachCombat.cpp').read_text() + '\nvoid idWeapon::Event_EjectBrass()\n', path)
@@ -202,8 +205,20 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed[path] = replace(changed[path],
         '\tvoid\t\t\t\t\tEvent_EjectBrass();',
         '\t// Reach opt-in weapon projection / single-player grenade inventory events.\n'
+        '\tvoid Event_ReachQuickAction();\n'
         '\tvoid Event_ReachGrenadesAvailable();\n\tvoid Event_ReachThrowFrag();\n'
         '\tvoid\t\t\t\t\tEvent_EjectBrass();', path)
+
+    path = paths[5]
+    changed[path] = replace(changed[path], '#include "Game_local.h"',
+                            '#include "Game_local.h"\n#include "ReachQuickActions.h"', path)
+    changed[path] = replace(changed[path], '\tlaunchOrigin = start;\n',
+        '\t// Reach opt-in weapon projection / first-floor frag fuse.\n'
+        '\tif( idStr::Cmp( GetEntityDefName(), "projectile_reach_frag" ) == 0 && spawnArgs.GetBool( "reach_floor_fuse" ) )\n'
+        '\t{\n\t\tspawnArgs.SetInt( "_reach_launchMsec", gameLocal.time );\n'
+        '\t\tspawnArgs.SetBool( "_reach_floorBounced", false );\n\t}\n\tlaunchOrigin = start;\n', path)
+    changed[path] = replace(changed[path], '\t// direction of projectile\n',
+                            (ROOT/'ReachFragCollision.cpp').read_text()+'\t// direction of projectile\n',path)
 
     # Validate all changes before touching the source checkout.
     for path in paths:
@@ -215,6 +230,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     for path in paths:
         (root/path).write_text(changed[path], encoding='utf-8', newline='\n')
     helper.write_bytes((ROOT/'WeaponProjection.h').read_bytes())
+    (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
     print('Applied projection extension to pinned RBDoom '+UPSTREAM)
     print('Default off; restricted to tagged owner FP rifle/flash; public entity/save/demo formats unchanged.')
 

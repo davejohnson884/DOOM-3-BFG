@@ -1,0 +1,26 @@
+Extract the complete enclosed ZIP into your Doom 3 BFG/RBDoom game folder.
+Overwrite the previous Reach executable and both Play-Reach-projection CMDs.
+Keep the previous Reach PK4s, including the TACPAD appearance pack.
+
+Start Play-Reach-projection.cmd and test on a fresh map first.
+V now uses native usercmd impulse23; G uses impulse24. Both are unused by
+this exact host's ordinary player actions. Inputs are consumed once per press
+while the Reach AR is equipped. G still requires Doom grenade ammo.
+The launcher explicitly loads a versioned controls CFG after the pose CFG.
+The input PK4 has a new filename and required native event, so an incomplete
+update should fail clearly instead of silently using the previous script.
+
+The console must print:
+  Reach r14 native V/G bindings loaded
+  [Reach r14] native-input rifle script active
+
+If either action still fails, run Play-Reach-projection-diagnostic.cmd, equip
+the AR, press V and G once, then close the game. Attach the diagnostic log
+it opens. It records the active script, actual bindings, native key receipt,
+action entry and contact/release. No console commands need to be entered.
+
+Rifle pose/projection, rendering and threading settings remain as accepted.
+The separate effects converter uses your focused ZIP for the actual Reach
+flash, frag model/material and explosion. Its frag definition enables a native
+floor-bounce timer with a separate arming delay; existing Doom projectiles
+keep their released behavior. No gameplay DLL injection or PowerShell launch.

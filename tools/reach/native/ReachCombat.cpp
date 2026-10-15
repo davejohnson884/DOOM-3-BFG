@@ -6,6 +6,21 @@ static bool ReachCombatWeapon( const renderEntity_t& ent )
 		idStr::Cmp( ent.hModel->Name(), "models/md5/weapons/reach_ar/view.md5mesh" ) == 0;
 }
 
+void idWeapon::Event_ReachQuickAction()
+{
+	idThread::ReturnFloat( 0 );
+	if( owner == NULL || common->IsMultiplayer() || !ReachCombatWeapon( renderEntity ) ) { return; }
+	const int sequence = owner->usercmd.impulseSequence;
+	const int previous = spawnArgs.GetInt( "_reach_lastImpulseSequence", "-1" );
+	const int action = ReachQuickActions::Read( sequence, previous, owner->usercmd.impulse );
+	if( sequence != previous ) { spawnArgs.SetInt( "_reach_lastImpulseSequence", sequence ); }
+	if( action != 0 && cvarSystem->GetCVarBool( "g_debugWeapon" ) )
+	{
+		gameLocal.Printf( "[ReachInput r14] native impulse %d received; sequence=%d\n", owner->usercmd.impulse, sequence );
+	}
+	idThread::ReturnFloat( action );
+}
+
 void idWeapon::Event_ReachGrenadesAvailable()
 {
 	if( owner == NULL || common->IsMultiplayer() || !ReachCombatWeapon( renderEntity ) )

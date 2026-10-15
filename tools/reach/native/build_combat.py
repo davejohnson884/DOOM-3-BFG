@@ -1,4 +1,4 @@
-"""Build an asset-free r13 gameplay overlay around the accepted r12 pose."""
+"""Build an asset-free r14 native-input overlay around the accepted r12 pose."""
 import argparse
 import hashlib
 import io
@@ -11,15 +11,39 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT.parent/'position'))
-from build_preset import script as pose_script, launcher, CONFIG_PATH, PK4_PATH
+from build_preset import script as pose_script, launcher as pose_launcher, CONFIG_PATH
 from build_position import DECL_PATH, DECLARATION, REPO
+
+PK4_PATH = 'reach/zzzzzzzzz_reach_input.pk4'
+CONTROLS = b'bind SHIFT _speed\nbind V _impulse23\nbind G _impulse24\necho "Reach r14 native V/G bindings loaded"\nbind V\nbind G\n'
+
+
+def launcher(diagnostic=False):
+    text = pose_launcher(diagnostic).decode().replace('\r\n','\n')
+    text = text.replace('+exec reach_pose.cfg','+exec reach_pose.cfg +exec reach_controls_r14.cfg')
+    guard = '''if not exist "%~dp0reach\\zzzzzzzzz_reach_input.pk4" (
+  echo Extract the complete r14 ZIP here, including the input PK4.
+  pause
+  exit /b 1
+)
+if not exist "%~dp0reach\\reach_controls_r14.cfg" (
+  echo Extract the complete r14 ZIP here, including reach_controls_r14.cfg.
+  pause
+  exit /b 1
+)
+'''
+    text = text.replace('if not exist "%~dp0reach\\reach_pose.cfg" (',guard+'if not exist "%~dp0reach\\reach_pose.cfg" (',1)
+    return text.replace('\n','\r\n').encode()
 
 
 def script():
     text = pose_script().decode()
-    text = text.replace('#include "script/reach_controls.script"', '''// These events are implemented by the r13 Reach executable.
+    text = text.replace('#include "script/reach_controls.script"', '''// These events require the r14 Reach executable.
 scriptEvent float reachGrenadesAvailable();
-scriptEvent float reachThrowFrag();''')
+scriptEvent float reachThrowFrag();
+scriptEvent float reachQuickAction();''')
+    text = text.replace('    ReachTrace("constructor entered");',
+                        '    sys.println("[Reach r14] native-input rifle script active");\n    ReachTrace("constructor entered");')
     text = text.replace('    float reach_pending_melee;', '    float reach_pending_melee;\n    float reach_pending_grenade;')
     text = text.replace('    void ReachInstallControls();', '    void ReachReadInput();\n    void ReachClearInput();\n    void Grenade();')
     start = text.index('void weapon_machinegun::ReachInstallControls()')
@@ -53,7 +77,7 @@ scriptEvent float reachThrowFrag();''')
         raise ValueError('Combat update changed the accepted pose')
     if 'trigger reach_melee_input' in text or 'ReachInstallControls' in text:
         raise ValueError('Old cheat-protected input path remains')
-    return text.replace('[ReachProjection r10]', '[ReachCombat r13]').encode()
+    return re.sub(r'\[Reach(?:Switch|Projection) r\d+\]', '[ReachCombat r14]', text).encode()
 
 
 def overlay():
@@ -61,7 +85,8 @@ def overlay():
         DECL_PATH: DECLARATION,
         'script/weapon_machinegun.script': script(),
         'def/reach_frag.def': (ROOT/'reach_frag.def').read_bytes(),
-        'reach_controls.cfg': b'bind SHIFT _speed\nbind V "set reach_meleeRequest 1"\nbind G "set reach_grenadeRequest 1"\nset reach_meleeRequest 0\nset reach_grenadeRequest 0\n',
+        'reach_controls.cfg': CONTROLS,
+        'reach_controls_r14.cfg': CONTROLS,
     }
     result = io.BytesIO()
     with zipfile.ZipFile(result, 'w', zipfile.ZIP_DEFLATED) as archive:
@@ -76,11 +101,12 @@ def build(output, engine, capture, source):
     files = {
         'ReachRBDoom3BFG.exe': candidate.check_pe64(engine),
         'ReachDebugLog.exe': Path(capture).read_bytes(),
-        # Replace the highest-priority r12 script; do not add another growing z prefix.
+        # New name proves that the input update was copied and outranks r12/r13.
         PK4_PATH: overlay(), CONFIG_PATH: (ROOT.parent/'position/reach_pose.cfg').read_bytes(),
+        'reach/reach_controls_r14.cfg': CONTROLS,
         'Play-Reach-projection.cmd': launcher(),
         'Play-Reach-projection-diagnostic.cmd': launcher(True),
-        'REACH-COMBAT-R13.txt': (ROOT/'COMBAT-R13.txt').read_bytes(),
+        'REACH-COMBAT-R14.txt': (ROOT/'COMBAT-R14.txt').read_bytes(),
         'licenses/Project-GPL.txt': (REPO/'COPYING.txt').read_bytes(),
         'licenses/RBDoom-GPL.md': (Path(source)/'LICENSE.md').read_bytes(),
         'licenses/RBDoom-exceptions.md': (Path(source)/'LICENSE_EXCEPTIONS.md').read_bytes(),
@@ -89,9 +115,9 @@ def build(output, engine, capture, source):
         for path in directory.iterdir():
             if path.is_file(): files['source/'+directory.name+'/'+path.name] = path.read_bytes()
     paths = ['neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-             'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h']
-    files['source/RBDoom-r13.patch'] = subprocess.check_output(['git','diff','--binary','--',*paths],cwd=source)
-    report = {'revision':'r13', 'upstream':candidate.UPSTREAM,
+             'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp']
+    files['source/RBDoom-r14.patch'] = subprocess.check_output(['git','diff','--binary','--',*paths],cwd=source)
+    report = {'revision':'r14', 'upstream':candidate.UPSTREAM,
               'toolCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=REPO,text=True).strip(),
               'pose':'r12 unchanged', 'runtimeTest':'Not run in cloud; owner playtest required',
               'files':{n:hashlib.sha256(b).hexdigest() for n,b in files.items()}}
