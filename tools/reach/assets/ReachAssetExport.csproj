@@ -16,6 +16,7 @@
     <ProjectReference Include="$(TagToolRoot)\TagTool\TagTool.csproj" />
     <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\Reach\jmad.xml" Link="schemas\jmad.xml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\weap.xml" Link="schemas\weap.xml" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\matg.xml" Link="schemas\matg.xml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\proj.xml" Link="schemas\proj.xml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\Reach\jpt!.xml" Link="schemas\jpt!.xml" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\effe.xml;$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\prt3.xml;$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\pmdf.xml;$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\hlmt.xml;$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\mode.xml;$(AssemblyRoot)\src\Assembly\Plugins\ReachMCC\rm*.xml" Link="schemas\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />

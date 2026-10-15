@@ -35,20 +35,22 @@ internal static class Program
             NativeLibrary.SetDllImportResolver(typeof(Program).Assembly, ResolveNative);
             if (args.Length == 1 && args[0] == "--selftest") return SelfTest();
             bool effectsOnly = args.Length == 5 && args[4] == "--effects";
-            if ((!effectsOnly && args.Length != 4) || args[0] != "--mcc" || args[2] != "--out")
-                throw new ArgumentException("Usage: ReachAssetExport --mcc <MCC install> --out <output folder> [--effects]");
+            bool paletteOnly = args.Length == 5 && args[4] == "--palette";
+            if ((!effectsOnly && !paletteOnly && args.Length != 4) || args[0] != "--mcc" || args[2] != "--out")
+                throw new ArgumentException("Usage: ReachAssetExport --mcc <MCC install> --out <output folder> [--effects|--palette]");
             var install = Path.GetFullPath(args[1]).TrimEnd(Path.DirectorySeparatorChar);
             var output = Path.GetFullPath(args[3]);
             if (output.Equals(install, StringComparison.OrdinalIgnoreCase) || output.StartsWith(install + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Output must be outside the MCC install.");
             var map = Path.Combine(install, "haloreach", "maps", "forge_halo.map");
             if (!File.Exists(map)) throw new FileNotFoundException("Reach forge_halo.map was not found.", map);
-            var bundle = Path.Combine(output, (effectsOnly ? "reach-effects-" : "reach-assets-") + Guid.NewGuid().ToString("N"));
+            var bundle = Path.Combine(output, (paletteOnly ? "reach-palette-" : effectsOnly ? "reach-effects-" : "reach-assets-") + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(bundle);
             Console.WriteLine("Reading MCC Reach files. Neither game will be launched or modified.");
             var cache = CacheFactory.ReadCacheFile(map);
             if (cache.Metadata.Engine != BlamEngine.HaloReach || !cache.Metadata.IsMcc)
                 throw new InvalidDataException("The map is not an MCC Reach cache.");
+            if (paletteOnly) return CollectPalette(cache, bundle);
             var weapon = cache.TagIndex.Where(t => t.ClassCode == "weap" && Normalize(t.TagName).Contains("assault_rifle"))
                 .OrderBy(t => t.TagName.Length).FirstOrDefault() ?? throw new InvalidDataException("No assault rifle weapon tag was found.");
             Console.WriteLine($"Assault rifle: {weapon.TagName}; map build: {cache.BuildString}");
@@ -90,6 +92,63 @@ internal static class Program
     }
 
     static string Schema(string name) => Path.Combine(AppContext.BaseDirectory, "schemas", name);
+
+    // MCC's globals layout differs from the Xbox 360 layout. Read only the
+    // documented profile-color block; do not walk unrelated global resources.
+    static (int Offset, int Size) PaletteLayout()
+    {
+        var root = System.Xml.Linq.XDocument.Load(Schema("matg.xml")).Root
+            ?? throw new InvalidDataException("Missing globals schema.");
+        var block = root.Elements("tagblock").Single(e => (string?)e.Attribute("name") == "Profile Colors");
+        int offset = Convert.ToInt32(((string?)block.Attribute("offset"))?[2..], 16);
+        int size = Convert.ToInt32(((string?)block.Attribute("elementSize"))?[2..], 16);
+        if ((string?)root.Attribute("game") != "ReachMCC" || offset != 0x498 || size != 12)
+            throw new InvalidDataException("Expected the pinned MCC Reach profile-color layout.");
+        return (offset, size);
+    }
+
+    static float[][] DecodePalette(byte[] bytes)
+    {
+        if (bytes.Length == 0 || bytes.Length % 12 != 0 || bytes.Length > 128 * 12)
+            throw new InvalidDataException("Invalid profile-color table size.");
+        var colors = new List<float[]>();
+        for (int i = 0; i < bytes.Length; i += 12) {
+            var rgb = new[] { BitConverter.ToSingle(bytes, i), BitConverter.ToSingle(bytes, i + 4), BitConverter.ToSingle(bytes, i + 8) };
+            if (rgb.Any(v => !float.IsFinite(v) || v < 0 || v > 16))
+                throw new InvalidDataException("Invalid source RGB values; no colors were guessed.");
+            colors.Add(rgb);
+        }
+        return colors.ToArray();
+    }
+
+    static int CollectPalette(ICacheFile cache, string bundle)
+    {
+        var globals = cache.TagIndex.Single(t => t.ClassCode == "matg");
+        var layout = PaletteLayout();
+        var table = RawTagCollector.ReadBlock(cache, globals.MetaPointer.Address + layout.Offset, layout.Size);
+        var colors = DecodePalette(table.Bytes);
+        File.WriteAllBytes(Path.Combine(bundle, "profile-colors.bin"), table.Bytes);
+        SaveJson(Path.Combine(bundle, "profile-colors.json"), new {
+            schemaVersion = 1, purpose = "Recover actual Reach MCC armor palette; no texture conversion",
+            cache.BuildString, tag = globals.TagName, tagClass = globals.ClassCode,
+            schema = "ReachMCC/matg.xml", assembly = AssemblyRevision,
+            tableOffset = layout.Offset, table.ElementSize, table.Count,
+            rawSha256 = Convert.ToHexString(SHA256.HashData(table.Bytes)),
+            profileColors = colors.Select((rgb, index) => new { index, rgb }),
+            colorStringIdentifiers = cache.StringIndex.Where(s => s != null &&
+                (s.Contains("steel", StringComparison.OrdinalIgnoreCase) || s.Contains("armor_color", StringComparison.OrdinalIgnoreCase))).Take(256).ToArray(),
+            limitations = new[] {
+                "These are source floats without gamma or range conversion.",
+                "Palette indices have not been labeled or equated with Noble Six's default selection.",
+                "Matching the default primary/secondary indices and Blam shader behavior requires review."
+            }
+        });
+        var zip = bundle + ".zip";
+        ZipFile.CreateFromDirectory(bundle, zip, CompressionLevel.Optimal, false);
+        Console.WriteLine($"Collected {colors.Length} source profile colors. No models, textures or sounds extracted.");
+        PrintUploadFiles(zip);
+        return 0;
+    }
     static IntPtr ResolveNative(string name, System.Reflection.Assembly assembly, DllImportSearchPath? paths) =>
         name == "fmod.dll" ? NativeLibrary.Load(Path.Combine(AppContext.BaseDirectory, "Tools", "fmod.dll")) : IntPtr.Zero;
     static string Normalize(string name) => name.Replace('\\', '/').ToLowerInvariant();
@@ -419,9 +478,19 @@ internal static class Program
         var root = Path.Combine(Path.GetTempPath(), "reach-asset-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try {
-            foreach (var schema in new[] { "weap", "proj", "jpt!", "effe", "prt3", "pmdf", "hlmt", "mode", "rmsh" }) {
+            foreach (var schema in new[] { "weap", "proj", "jpt!", "effe", "prt3", "pmdf", "hlmt", "mode", "rmsh", "matg" }) {
                 var xml = System.Xml.Linq.XDocument.Load(Schema(schema + ".xml"));
                 if (xml.Root?.Attribute("baseSize") == null) throw new Exception("Missing effect schema: " + schema);
+            }
+            PaletteLayout();
+            var palette = new byte[24];
+            new[] { .125f, .25f, .5f, 1f, .75f, .0625f }.SelectMany(BitConverter.GetBytes).ToArray().CopyTo(palette, 0);
+            var decoded = DecodePalette(palette);
+            if (decoded.Length != 2 || decoded[0][0] != .125f || decoded[0][2] != .5f || decoded[1][1] != .75f)
+                throw new Exception("Palette RGB/index ordering changed.");
+            foreach (var invalid in new[] { new byte[0], new byte[13], BitConverter.GetBytes(float.NaN).Concat(new byte[8]).ToArray() }) {
+                bool rejected = false; try { DecodePalette(invalid); } catch (InvalidDataException) { rejected = true; }
+                if (!rejected) throw new Exception("Invalid palette accepted.");
             }
             foreach (var bad in new[] { "../escape", "C:/escape", "/escape", "ok/../../escape" }) {
                 bool rejected = false; try { SafeName(bad); } catch (InvalidDataException) { rejected = true; }
