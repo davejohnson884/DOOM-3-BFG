@@ -20,7 +20,7 @@ def apply(root):
     if head != UPSTREAM:
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
-             'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp']
+             'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')
@@ -168,6 +168,42 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 		Event_StartWeaponParticle( "reach_fp_flash" );
 	}
 ''', path)
+
+    # Reach opt-in weapon projection / quick actions. The retail trigger
+    # console command is cheat-protected; scripts receive ordinary user cvars.
+    # Only grenade inventory and casing velocity need native gameplay support.
+    changed[path] = replace(changed[path],
+        'const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );',
+        'const idEventDef EV_ReachGrenadesAvailable( "reachGrenadesAvailable", NULL, \'f\' );\n'
+        'const idEventDef EV_ReachThrowFrag( "reachThrowFrag", NULL, \'f\' );\n'
+        'const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );', path)
+    changed[path] = replace(changed[path],
+        'EVENT( EV_Weapon_UseAmmo,',
+        'EVENT( EV_ReachGrenadesAvailable, idWeapon::Event_ReachGrenadesAvailable )\n'
+        'EVENT( EV_ReachThrowFrag, idWeapon::Event_ReachThrowFrag )\nEVENT( EV_Weapon_UseAmmo,', path)
+    changed[path] = replace(changed[path],
+        'void idWeapon::Event_EjectBrass()\n',
+        (ROOT/'ReachCombat.cpp').read_text() + '\nvoid idWeapon::Event_EjectBrass()\n', path)
+    changed[path] = replace(changed[path],
+        '\tidDebris* debris = static_cast<idDebris*>( ent );\n\tdebris->Create( owner, origin, axis );',
+        '\tidDebris* debris = static_cast<idDebris*>( ent );\n'
+        '\tif( ReachCombatWeapon( renderEntity ) )\n\t{\n'
+        '\t\t// Blam ejection-marker rotation is not the stock casing model basis.\n'
+        '\t\taxis[0] = -playerViewAxis[1];\n\t\taxis[1] = playerViewAxis[0];\n\t\taxis[2] = playerViewAxis[2];\n\t}\n'
+        '\tdebris->Create( owner, origin, axis );', path)
+    changed[path] = replace(changed[path],
+        '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );',
+        '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );\n'
+        '\tif( ReachCombatWeapon( renderEntity ) )\n\t{\n'
+        '\t\t// Camera axis 1 is LEFT. Eject out to the right, slightly upward.\n'
+        '\t\tlinear_velocity = -playerViewAxis[1] * 100.0f + playerViewAxis[2] * 12.0f +\n'
+        '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
+    path = paths[4]
+    changed[path] = replace(changed[path],
+        '\tvoid\t\t\t\t\tEvent_EjectBrass();',
+        '\t// Reach opt-in weapon projection / single-player grenade inventory events.\n'
+        '\tvoid Event_ReachGrenadesAvailable();\n\tvoid Event_ReachThrowFrag();\n'
+        '\tvoid\t\t\t\t\tEvent_EjectBrass();', path)
 
     # Validate all changes before touching the source checkout.
     for path in paths:

@@ -1,0 +1,25 @@
+Extract this complete ZIP into your Doom 3 BFG/RBDoom game folder and overwrite
+the previous Reach files. Start Play-Reach-projection.cmd as before.
+
+Start a fresh map for this test: changed weapon script fields can invalidate
+older mod saves. The original private Reach PK4 and r8 projection overlay
+must remain installed.
+
+V: Reach AR melee animation and one contact damage event.
+G: Reach throw animation; consumes one unit of Doom grenade ammo at release.
+No grenade ammo means no throw. Normal Doom inventory/pickups are retained.
+SHIFT: existing sprint. Rifle pose/projection remains the accepted r12 pose.
+
+Casings now eject toward camera-right with a small upward component, using
+the camera basis rather than the imported marker's rotation. Other weapons
+retain their released casing code. The executable retains the exact released
+RBDoom foundation and prior projection code, with scoped single-player
+grenade inventory events added. No threading/display/performance defaults change.
+
+This is a gameplay test, not a completed Reach frag asset port. The frag uses
+Doom's grenade model/explosion with provisional timed-bounce tuning. The flash
+art is unchanged until the focused Reach export is supplied. TACPAD/material
+conversion is separate and does not come in this asset-free ZIP.
+
+Built and checked in CI; actual game playtest required on your PC.
+For diagnostics run Play-Reach-projection-diagnostic.cmd.

@@ -1,0 +1,32 @@
+// Temporary frag gameplay prototype. Actual Reach art/tuning await focused export.
+entityDef projectile_reach_frag {
+    "inherit" "projectile_grenade"
+    "def_damage" "damage_reach_frag_contact"
+    "def_splash_damage" "damage_reach_frag_splash"
+    "velocity" "720 0 120"
+    "angular_velocity" "12 -8 10"
+    "fuse" "2.5"
+    "detonate_on_fuse" "1"
+    "detonate_on_world" "0"
+    "detonate_on_actor" "0"
+    "detonate_on_trigger" "0"
+    "smoke_fly" ""
+    "smoke_bounce" ""
+    "linear_friction" "0.05"
+    "bounce" "0.45"
+    "mass" "0.4"
+    "debris_count" "0"
+    "impact_damage_effect" "0"
+}
+entityDef damage_reach_frag_contact {
+    "damage" "0"
+    "push" "0"
+}
+entityDef damage_reach_frag_splash {
+    "inherit" "damage_grenadeSplash"
+    "damage" "120"
+    "radius" "180"
+    "push" "3000"
+    "knockback" "30"
+    "attackerDamageScale" "1"
+}

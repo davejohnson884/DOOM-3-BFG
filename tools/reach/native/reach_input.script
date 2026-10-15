@@ -1,0 +1,23 @@
+void weapon_machinegun::ReachClearInput() {
+    sys.setcvar("reach_meleeRequest", "0");
+    sys.setcvar("reach_grenadeRequest", "0");
+}
+
+void weapon_machinegun::ReachReadInput() {
+    boolean reach_want_melee;
+    boolean reach_want_grenade;
+    reach_want_melee = sys.getcvar("reach_meleeRequest") == "1";
+    reach_want_grenade = sys.getcvar("reach_grenadeRequest") == "1";
+    if (reach_want_melee || reach_want_grenade) {
+        ReachClearInput();
+        if (!reach_action_locked && !WEAPON_LOWERWEAPON) {
+            if (reach_want_melee) {
+                reach_pending_melee = 1;
+                ReachTrace("V request consumed");
+            } else if (reach_want_grenade && reachGrenadesAvailable() != 0) {
+                reach_pending_grenade = 1;
+                ReachTrace("G request consumed");
+            } else { ReachTrace("G request ignored: no grenade ammo"); }
+        }
+    }
+}

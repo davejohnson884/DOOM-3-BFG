@@ -1,0 +1,34 @@
+void weapon_machinegun::Grenade() {
+    float reach_release_time;
+    float reach_finish_time;
+    boolean reach_released;
+    if (reachGrenadesAvailable() == 0) {
+        reach_pending_grenade = 0;
+        weaponState("Idle", 1);
+    }
+    reach_action_locked = 1;
+    reach_pending_grenade = 0;
+    reach_pending_melee = 0;
+    ReachClearInput();
+    reach_released = false;
+    reach_release_time = sys.getTime() + getFloatKey("reach_grenade_windup_ms") / 1000;
+    reach_finish_time = reach_release_time + getFloatKey("reach_grenade_recover_ms") / 1000;
+    weaponReady();
+    playAnim(ANIMCHANNEL_ALL, "throw_grenade");
+    while (sys.getTime() < reach_finish_time) {
+        ReachReadInput();
+        if (WEAPON_LOWERWEAPON) {
+            reach_action_locked = 0;
+            weaponState("Lower", 2);
+        }
+        if (!reach_released && sys.getTime() >= reach_release_time) {
+            if (reachThrowFrag()) { ReachTrace("frag released; one Doom grenade consumed"); }
+            else { ReachTrace("frag release failed; ammo preserved"); }
+            reach_released = true;
+        }
+        ReachAmmoDisplay();
+        waitFrame();
+    }
+    reach_action_locked = 0;
+    weaponState("Idle", 2);
+}
