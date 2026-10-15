@@ -3,8 +3,10 @@ Double-click Build-Reach-appearance.cmd, then select the original
 reach-assets-....zip that the earlier collector created on your PC.
 Choose the original ZIP, not its numbered .part001 pieces.
 
-The tool reads that ZIP and the installed reach/zzz_reach_ar.pk4, then creates:
+The tool reads that ZIP and the installed reach/zzz_reach_ar.pk4, then creates
+this file next to the tool:
   reach/zzzzzzzz_reach_appearance.pk4
+Copy the generated reach folder into your Doom 3 BFG game folder.
 Start Play-Reach-projection.cmd as usual. No new launch wrapper is needed.
 To undo, remove that one appearance PK4. Original assets are never overwritten.
 
@@ -17,3 +19,6 @@ All 25 clips retain their motion; only bounding boxes expand for the accessory.
 This is a first visual match, not an exact recreation of Blam's lighting.
 Detail maps are baked at base texture resolution. Please test idle, reload,
 sprint and melee/grenade clips for accessory clipping on your PC.
+
+Tool source and build workflow:
+https://github.com/davejohnson884/DOOM-3-BFG/tree/reach-combat/tools/reach/assets

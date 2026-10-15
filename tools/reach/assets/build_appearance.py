@@ -6,7 +6,7 @@ animations, the accepted pose, the counter skin and gameplay remain untouched.
 import argparse
 import io
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import tempfile
 import time
@@ -110,7 +110,7 @@ def material(scene, mat, bundle, entries):
 def extract(archive, root):
     if sum(i.file_size for i in archive.infolist())>1024**3: raise ValueError('ZIP exceeds extraction limit')
     for item in archive.infolist():
-        path = Path(item.filename.replace('\\','/'))
+        path = PurePosixPath(item.filename.replace('\\','/'))
         if path.is_absolute() or '..' in path.parts or ':' in item.filename: raise ValueError('Unsafe ZIP path')
     archive.extractall(root)
 
@@ -185,7 +185,7 @@ def build(bundle, original, output):
             for name,data in sorted(entries.items()): result.writestr(name,data)
         with zipfile.ZipFile(output) as result:
             if result.testzip() is not None: raise ValueError('Appearance PK4 CRC check failed')
-        print('Created '+str(output)+'. Start the usual Play-Reach-projection.cmd. Remove this PK4 to undo.')
+        print('Created '+str(output)+'. Copy the generated reach folder into the game folder; use the usual Play-Reach-projection.cmd. Remove this PK4 to undo.')
         return report
 
 
@@ -193,6 +193,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--donor',type=Path)
     parser.add_argument('--game',type=Path,required=True)
+    parser.add_argument('--out',type=Path,default=Path.cwd()/'reach'/TARGET)
     args = parser.parse_args()
     original = args.game/'reach/zzz_reach_ar.pk4'
     if not original.is_file(): raise FileNotFoundError('Existing Reach AR pack not found: '+str(original))
@@ -204,7 +205,7 @@ def main():
         window.destroy()
         if not selected: raise ValueError('No donor selected. No game files changed.')
         args.donor = Path(selected)
-    output = args.game/'reach'/TARGET
+    output = args.out
     if args.donor.is_dir(): build(args.donor,original,output)
     else:
         with tempfile.TemporaryDirectory(prefix='reach-appearance-donor-') as directory:

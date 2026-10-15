@@ -42,6 +42,10 @@ jobs:
           New-Item -ItemType Directory build/reach-appearance/licenses -Force | Out-Null
           Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-appearance/licenses/Reclaimer.txt
           Copy-Item tools/reach/assets/rmf_reader/UPSTREAM.md build/reach-appearance/licenses/Reclaimer-source.md
+          Copy-Item COPYING.txt build/reach-appearance/licenses/Project-GPL.txt
+          New-Item -ItemType Directory build/reach-appearance/source -Force | Out-Null
+          Copy-Item tools/reach/assets/*.py, tools/reach/assets/requirements.txt build/reach-appearance/source/
+          Copy-Item -Recurse tools/reach/assets/rmf_reader build/reach-appearance/source/
           python tools/reach/assets/copy_licenses.py build/reach-appearance/licenses
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
