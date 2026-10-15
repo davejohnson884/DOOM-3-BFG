@@ -1,8 +1,8 @@
 Reach AR position preset r12 - rifle-only offsets applied automatically
 
 1. Close the game. Extract this ZIP beside ReachRBDoom3BFG.exe.
-2. Overwrite both Play-Reach-projection CMD files and the position PK4.
-   Copy the included reach/reach_pose.cfg as well.
+2. Overwrite both Play-Reach-projection CMD files and copy the entire reach
+   folder from this update, including the new rifle pose PK4 and CFG.
 3. Launch Play-Reach-projection.cmd. No manual exec or g_gun edits are needed.
    Test a fresh map first because the rifle presentation script has changed.
 
@@ -19,6 +19,10 @@ The game console prints "Reach AR r12 pose preset loaded" and the six
 rifle-specific position/angle settings. Both normal and diagnostic CMDs
 load the preset after saved startup settings. A missing preset or overlay
 stops the launcher with an explanation.
+
+The new reach/zzzzzzz_reach_ar_pose.pk4 takes priority over the earlier
+six-z position overlay. Keep the earlier files installed; this update uses
+a new filename so an incomplete copy cannot silently launch an old script.
 
 The accepted projection, executable and r9 model offset are retained. The
 shift is based on your original g_gun anchor, not a second -4/4/1 translation

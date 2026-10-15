@@ -9,10 +9,11 @@ import subprocess
 import zipfile
 
 from build_pose import script as rotation_script, SCRIPT_PATH, PATTERN
-from build_position import ROOT, REPO, DECL_PATH, DECLARATION, OFFSET, PK4_PATH
+from build_position import ROOT, REPO, DECL_PATH, DECLARATION, OFFSET
 from build_candidate import launcher as projection_launcher
 
 CONFIG_PATH = 'reach/reach_pose.cfg'
+PK4_PATH = 'reach/zzzzzzz_reach_ar_pose.pk4'
 
 
 def script():
@@ -36,7 +37,7 @@ def launcher(diagnostic=False):
   pause
   exit /b 1
 )
-if not exist "%~dp0reach\\zzzzzz_reach_position.pk4" (
+if not exist "%~dp0reach\\zzzzzzz_reach_ar_pose.pk4" (
   echo Extract the complete r12 ZIP here, including the position PK4.
   pause
   exit /b 1

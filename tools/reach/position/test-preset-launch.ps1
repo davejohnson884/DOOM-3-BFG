@@ -4,16 +4,22 @@ New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 Expand-Archive -LiteralPath build/Reach-rifle-preset-r12.zip -DestinationPath $fixtureRoot
 $env:REACH_PRESET_FIXTURE_ROOT = $fixtureRoot
 @'
-import os, sys, zipfile
+import io, os, sys, zipfile
 from pathlib import Path
 sys.path.insert(0, 'tools/reach/native')
 import build_candidate
 sys.path.insert(0, 'tools/reach/position')
 import build_preset
+import build_pose
 root = Path(os.environ['REACH_PRESET_FIXTURE_ROOT'])
 (root/'reach/zzzzz_reach_projection.pk4').write_bytes(build_candidate.overlay())
 (root/'reach/zzz_reach_ar.pk4').write_text('asset fixture only')
-with zipfile.ZipFile(root/'reach/zzzzzz_reach_position.pk4') as archive:
+old = io.BytesIO()
+with zipfile.ZipFile(old, 'w', zipfile.ZIP_DEFLATED) as archive:
+    archive.writestr('script/weapon_machinegun.script', build_pose.script())
+    archive.writestr('def/reach_presentation.def', build_pose.DECLARATION)
+(root/'reach/zzzzzz_reach_position.pk4').write_bytes(old.getvalue())
+with zipfile.ZipFile(root/build_preset.PK4_PATH) as archive:
     assert archive.testzip() is None
     assert archive.read('script/weapon_machinegun.script') == build_preset.script()
     assert archive.read('def/reach_presentation.def') == build_preset.DECLARATION
@@ -70,6 +76,7 @@ public static class PresetFixture {
     public static int Main(string[] args) {
         try {
             File.WriteAllText(Path.Combine(root, "arguments.txt"), Environment.CurrentDirectory + "\n" + String.Join("\n", args));
+            if (!ReadConfig("script/weapon_machinegun.script").Contains("r12 rifle anchor")) throw new Exception("Old overlay won script priority");
             for (int i = 0; i < args.Length; ++i) {
                 if (args[i] == "+exec") Exec(args[++i], 0);
                 else if (args[i] == "+set") { string name = args[++i]; vars[name] = args[++i]; }
