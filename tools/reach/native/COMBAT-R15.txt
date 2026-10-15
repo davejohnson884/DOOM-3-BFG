@@ -1,0 +1,24 @@
+1. Extract the complete inner ZIP into the actual game folder containing your
+   ReachRBDoom3BFG.exe (your diagnostic shows E:\SteamLibrary\steamapps\common\DOOM 3 BFG Edition).
+2. Double-click Apply-Reach-repair.cmd once, with the game closed.
+3. Start Play-Reach-projection.cmd and test on a fresh map first.
+
+The repair reads your already-installed private appearance/effect PK4s. It
+does not need another MCC export or donor ZIP. It writes one new repair PK4;
+old assets remain installed. The launcher requires this completed repair.
+
+V = reachMelee, G = reachGrenade, ordinary SP gameplay commands without a
+cheat flag. These queue the current Reach weapon's action directly. Grenade
+ammo still comes from Doom's inventory. Diagnostic logging records command
+receipt, gameplay identity and action consumption independently of rendering.
+
+Fixes invalid initialAngle particle syntax (the host accepts angle). Gives
+TACPAD model/animation/material/image assets fresh names to bypass generated
+binary cache entries. Original rig, accepted pose, motion and pixels retained.
+The armor tint remains the previous estimate; it is NOT a recovered exact
+Noble Six color preset. No extra repainting or invented Noble Six texture.
+
+If actions still fail, use Play-Reach-projection-diagnostic.cmd, equip the AR,
+press V/G once, close the game and attach its diagnostic log plus
+reach-repair-r15-report.json. The log will show command receipt and whether
+the current weapon accepted it. No manual console commands are needed.

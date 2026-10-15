@@ -107,7 +107,7 @@ def stage(material,life,size,aspect=1,orientation='view',offset='0 0 0',angle=0,
         speed {speed}
         size {size}
         aspect {aspect}
-        initialAngle {angle}
+        angle {angle}
         rotation 0
         randomDistribution 0
         gravity 0

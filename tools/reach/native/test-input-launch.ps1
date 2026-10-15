@@ -16,7 +16,8 @@ for name in ['zzz_reach_ar.pk4','zzzzzzz_reach_ar_pose.pk4','zzzzz_reach_project
     (root/'reach'/name).write_bytes(b'old fixture only')
 (root/b.PK4_PATH).write_bytes(b.overlay())
 (root/b.CONFIG_PATH).write_bytes((b.ROOT.parent/'position/reach_pose.cfg').read_bytes())
-(root/'reach/reach_controls_r14.cfg').write_bytes(b.CONTROLS)
+(root/'reach/reach_controls_r15.cfg').write_bytes(b.CONTROLS)
+(root/'reach/zzzzzzzzzzz_reach_repair_r15.pk4').write_bytes(b'completed repair fixture')
 '@ | python -
   if ($LASTEXITCODE -ne 0) { throw 'Input fixture generation failed.' }
   Copy-Item build/ReachDebugLog.exe $root
@@ -40,19 +41,23 @@ public static class ReachInputFixture {
     $name = if ($diagnostic) { 'Play-Reach-projection-diagnostic.cmd' } else { 'Play-Reach-projection.cmd' }
     $extra = if ($diagnostic) { ' --no-explorer' } else { '' }
     & cmd.exe /d /c ('"' + (Join-Path $root $name) + '"' + $extra)
-    if ($LASTEXITCODE -ne 0) { throw 'r14 launcher failed.' }
+    if ($LASTEXITCODE -ne 0) { throw 'r15 launcher failed.' }
     $report = Join-Path $root 'input-args.txt'
     $deadline = (Get-Date).AddSeconds(10)
     while (-not (Test-Path $report) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 100 }
-    if (-not (Test-Path $report)) { throw 'r14 executable was not started.' }
+    if (-not (Test-Path $report)) { throw 'r15 executable was not started.' }
     $arguments = @(Get-Content $report)
-    if (($arguments[-4..-1] -join '|') -ne '+exec|reach_pose.cfg|+exec|reach_controls_r14.cfg') { throw 'Input bindings are not loaded after pose config.' }
+    if (($arguments[-4..-1] -join '|') -ne '+exec|reach_pose.cfg|+exec|reach_controls_r15.cfg') { throw 'Input bindings are not loaded after pose config.' }
     Remove-Item $report
   }
   Remove-Item (Join-Path $root 'reach/zzzzzzzzz_reach_input.pk4')
   & cmd.exe /d /c ('"' + (Join-Path $root 'Play-Reach-projection.cmd') + '" <NUL')
-  if ($LASTEXITCODE -eq 0 -or (Test-Path (Join-Path $root 'input-args.txt'))) { throw 'Incomplete r14 copy started the engine.' }
-  Write-Host '::notice title=Native input launch::PASS: real CMD and diagnostic helper load versioned controls last, support paths with spaces and reject a missing r14 PK4.'
+  if ($LASTEXITCODE -eq 0 -or (Test-Path (Join-Path $root 'input-args.txt'))) { throw 'Incomplete r15 copy started the engine.' }
+  New-Item -ItemType File (Join-Path $root 'reach/zzzzzzzzz_reach_input.pk4') | Out-Null
+  Remove-Item (Join-Path $root 'reach/zzzzzzzzzzz_reach_repair_r15.pk4')
+  & cmd.exe /d /c ('"' + (Join-Path $root 'Play-Reach-projection.cmd') + '" <NUL')
+  if ($LASTEXITCODE -eq 0 -or (Test-Path (Join-Path $root 'input-args.txt'))) { throw 'Unrepaired r15 install started the engine.' }
+  Write-Host '::notice title=Native input launch::PASS: real CMD and diagnostic helper load versioned controls last, support paths with spaces and reject missing input/repair PK4s.'
   exit 0
 } catch {
   $detail = $_.ToString().Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')

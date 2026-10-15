@@ -1,4 +1,4 @@
-name: Reach RBDoom native input r14
+name: Reach RBDoom repair r15
 
 on:
   push:
@@ -72,17 +72,31 @@ jobs:
       - name: Verify actual candidate CMD launch
         shell: powershell
         run: ./tools/reach/native/test-input-launch.ps1
+      - name: Validate and freeze installed private asset repair tool
+        shell: pwsh
+        run: |
+          python -m pip install pyinstaller==6.16.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/reach/native/test_repair.py rbdoom
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '::error title=Asset repair::Installed-pack fixtures or pinned particle-parser contract failed.'
+            exit 1
+          }
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachRepair --distpath build/repair-tool --workpath build/repair-work --specpath build tools/reach/native/repair_assets.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/repair-tool/ReachRepair.exe --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package separate executable and asset-free overlay
         shell: pwsh
         run: |
           python tools/reach/native/check_combat.py rbdoom
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tools/reach/native/build_combat.py build/Reach-combat-r14.zip --engine rbdoom/build-reach/Release/RBDoom3BFG.exe --capture build/ReachDebugLog.exe --source rbdoom
+          python tools/reach/native/build_combat.py build/Reach-repair-r15.zip --engine rbdoom/build-reach/Release/RBDoom3BFG.exe --capture build/ReachDebugLog.exe --source rbdoom --repair build/repair-tool/ReachRepair.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
-          name: reach-combat-r14
-          path: build/Reach-combat-r14.zip
+          name: reach-repair-r15
+          path: build/Reach-repair-r15.zip
           if-no-files-found: error
       - name: Preserve build evidence
         if: always()

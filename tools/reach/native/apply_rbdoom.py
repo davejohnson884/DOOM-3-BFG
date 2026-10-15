@@ -20,7 +20,8 @@ def apply(root):
     if head != UPSTREAM:
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
-             'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp']
+             'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp',
+             'neo/d3xp/gamesys/SysCmds.cpp']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')
@@ -125,14 +126,14 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '''		// Reach opt-in weapon projection: the candidate script tags its
 		// model during construction. Use an owned emitter so the flash follows
 		// the same FP projection instead of the shared world smoke geometry.
-		if( renderEntity.shaderParms[6] == 1.0f && renderEntity.hModel != NULL &&
-			idStr::Cmp( renderEntity.hModel->Name(), "models/md5/weapons/reach_ar/view.md5mesh" ) == 0 )
+		if( idStr::Cmp( spawnArgs.GetString( "model_view" ), "viewmodel_reach_ar" ) == 0 &&
+			idStr::Cmp( spawnArgs.GetString( "weapon_scriptobject" ), "weapon_machinegun" ) == 0 )
 		{
 			const idDeclEntityDef* emitterDef = gameLocal.FindEntityDef( "func_emitter", false );
 			if( emitterDef != NULL && barrelJointView != INVALID_JOINT )
 			{
 				idDict args = emitterDef->dict;
-				args.Set( "model", "reach_ar_flash.prt" );
+				args.Set( "model", "reach_ar_flash_r15.prt" );
 				args.SetBool( "start_off", true );
 				args.SetBool( "cycleTrigger", true );
 				idEntity* flashEnt = NULL;
@@ -141,7 +142,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 					WeaponParticle_t fpParticle;
 					memset( &fpParticle, 0, sizeof( fpParticle ) );
 					strcpy( fpParticle.name, "reach_fp_flash" );
-					strcpy( fpParticle.particlename, "reach_ar_flash.prt" );
+					strcpy( fpParticle.particlename, "reach_ar_flash_r15.prt" );
 					fpParticle.joint = barrelJointView;
 					fpParticle.emitter = static_cast<idFuncEmitter*>( flashEnt );
 					renderEntity_t* fpFlash = fpParticle.emitter->GetRenderEntity();
@@ -164,15 +165,14 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\tweaponSmokeStartTime = gameLocal.realClientTime;\n',
         '''	weaponSmokeStartTime = gameLocal.realClientTime;
 	WeaponParticle_t* fpFlashParticle = NULL;
-	if( renderEntity.shaderParms[6] == 1.0f &&
-		weaponParticles.Get( "reach_fp_flash", &fpFlashParticle ) && fpFlashParticle != NULL )
+	if( weaponParticles.Get( "reach_fp_flash", &fpFlashParticle ) && fpFlashParticle != NULL )
 	{
 		Event_StartWeaponParticle( "reach_fp_flash" );
 	}
 ''', path)
 
     # Reach opt-in weapon projection / quick actions. The retail trigger
-    # console command is cheat-protected; r14 reads native usercmd impulses.
+    # console command is cheat-protected; use gameplay commands plus impulse fallback.
     changed[path] = replace(changed[path],
         'const idEventDef EV_Weapon_UseAmmo( "useAmmo", "d" );',
         'const idEventDef EV_ReachGrenadesAvailable( "reachGrenadesAvailable", NULL, \'f\' );\n'
@@ -190,18 +190,20 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed[path] = replace(changed[path],
         '\tidDebris* debris = static_cast<idDebris*>( ent );\n\tdebris->Create( owner, origin, axis );',
         '\tidDebris* debris = static_cast<idDebris*>( ent );\n'
-        '\tif( ReachCombatWeapon( renderEntity ) )\n\t{\n'
+        '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
         '\t\t// Blam ejection-marker rotation is not the stock casing model basis.\n'
         '\t\taxis[0] = -playerViewAxis[1];\n\t\taxis[1] = playerViewAxis[0];\n\t\taxis[2] = playerViewAxis[2];\n\t}\n'
         '\tdebris->Create( owner, origin, axis );', path)
     changed[path] = replace(changed[path],
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );',
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );\n'
-        '\tif( ReachCombatWeapon( renderEntity ) )\n\t{\n'
+        '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
         '\t\t// Camera axis 1 is LEFT. Eject out to the right, slightly upward.\n'
         '\t\tlinear_velocity = -playerViewAxis[1] * 100.0f + playerViewAxis[2] * 12.0f +\n'
         '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
     path = paths[4]
+    changed[path] = replace(changed[path], 'public:\n',
+        'public:\n\t// Reach opt-in weapon projection / queued SP action API.\n\tbool ReachQueueAction( int action );\n', path)
     changed[path] = replace(changed[path],
         '\tvoid\t\t\t\t\tEvent_EjectBrass();',
         '\t// Reach opt-in weapon projection / single-player grenade inventory events.\n'
@@ -219,6 +221,14 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\t\tspawnArgs.SetBool( "_reach_floorBounced", false );\n\t}\n\tlaunchOrigin = start;\n', path)
     changed[path] = replace(changed[path], '\t// direction of projectile\n',
                             (ROOT/'ReachFragCollision.cpp').read_text()+'\t// direction of projectile\n',path)
+
+    path = paths[6]
+    changed[path] = replace(changed[path], 'void idGameLocal::InitConsoleCommands()\n',
+        (ROOT/'ReachInputCommands.cpp').read_text()+'void idGameLocal::InitConsoleCommands()\n',path)
+    changed[path] = replace(changed[path], 'void idGameLocal::InitConsoleCommands()\n{\n',
+        'void idGameLocal::InitConsoleCommands()\n{\n'
+        '\tcmdSystem->AddCommand( "reachMelee", Cmd_ReachMelee_f, CMD_FL_GAME, "Reach AR melee" );\n'
+        '\tcmdSystem->AddCommand( "reachGrenade", Cmd_ReachGrenade_f, CMD_FL_GAME, "Reach AR grenade throw" );\n',path)
 
     # Validate all changes before touching the source checkout.
     for path in paths:

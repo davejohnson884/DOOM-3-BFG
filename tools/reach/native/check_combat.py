@@ -28,16 +28,19 @@ def check(source):
     with zipfile.ZipFile(io.BytesIO(overlay())) as archive:
         assert archive.read('script/weapon_machinegun.script') == script()
         controls = archive.read('reach_controls.cfg').decode()
-        assert 'bind V _impulse23' in controls
-        assert 'bind G _impulse24' in controls
+        assert 'bind V reachMelee' in controls
+        assert 'bind G reachGrenade' in controls
         assert 'reach_meleeRequest' not in text and 'reach_grenadeRequest' not in text
         assert 'trigger ' not in controls
         assert 'r_reachWeaponFov' not in controls and 'g_fov' not in controls
     files = set(subprocess.check_output(['git','diff','--name-only'],cwd=source,text=True).splitlines())
     assert files == {'neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-                     'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp'}, files
+                     'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp'}, files
+    commands=(source/'neo/d3xp/gamesys/SysCmds.cpp').read_text()
+    for name in ['reachMelee','reachGrenade']:
+        assert re.search(r'AddCommand\( "'+name+r'", \w+, CMD_FL_GAME,',commands), 'Command must not require cheats'
     print('PASS: native/script events, event-name collision check, packaged V/G bindings, '
-          'unchanged r12 pose, and six-file source scope. Actual in-game playtest still required.')
+          'unchanged r12 pose, non-cheat gameplay commands and seven-file source scope. Actual in-game playtest still required.')
 
 
 if __name__ == '__main__': check(sys.argv[1])

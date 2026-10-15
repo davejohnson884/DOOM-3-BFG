@@ -1,29 +1,50 @@
 // Reach opt-in weapon projection / single-player quick-action support.
 // No saved fields, new input threads, physics defaults or global ammo changes.
-static bool ReachCombatWeapon( const renderEntity_t& ent )
+static bool ReachCombatWeapon( const idDict& args )
 {
-	return ent.shaderParms[6] == 1.0f && ent.hModel != NULL &&
-		idStr::Cmp( ent.hModel->Name(), "models/md5/weapons/reach_ar/view.md5mesh" ) == 0;
+	// Gameplay identity must not depend on render-model cache names or shader state.
+	return idStr::Cmp( args.GetString( "model_view" ), "viewmodel_reach_ar" ) == 0 &&
+		idStr::Cmp( args.GetString( "weapon_scriptobject" ), "weapon_machinegun" ) == 0;
+}
+
+bool idWeapon::ReachQueueAction( int action )
+{
+	if( owner == NULL || owner->health <= 0 || common->IsMultiplayer() ||
+		!ReachCombatWeapon( spawnArgs ) || ( action != 1 && action != 2 ) ) { return false; }
+	spawnArgs.SetInt( "_reach_pendingAction", action );
+	if( cvarSystem->GetCVarBool( "g_debugWeapon" ) )
+	{
+		gameLocal.Printf( "[ReachInput r15] gameplay command queued: %s\n", action == 1 ? "melee" : "grenade" );
+	}
+	return true;
 }
 
 void idWeapon::Event_ReachQuickAction()
 {
 	idThread::ReturnFloat( 0 );
-	if( owner == NULL || common->IsMultiplayer() || !ReachCombatWeapon( renderEntity ) ) { return; }
+	if( owner == NULL || common->IsMultiplayer() || !ReachCombatWeapon( spawnArgs ) ) { return; }
+	if( cvarSystem->GetCVarBool( "g_debugWeapon" ) && !spawnArgs.GetBool( "_reach_inputReported" ) )
+	{
+		spawnArgs.SetBool( "_reach_inputReported", true );
+		gameLocal.Printf( "[ReachInput r15] gameplay identity accepted; model=%s parm6=%.3f\n",
+			renderEntity.hModel != NULL ? renderEntity.hModel->Name() : "<none>", renderEntity.shaderParms[6] );
+	}
 	const int sequence = owner->usercmd.impulseSequence;
 	const int previous = spawnArgs.GetInt( "_reach_lastImpulseSequence", "-1" );
-	const int action = ReachQuickActions::Read( sequence, previous, owner->usercmd.impulse );
+	const int pending = spawnArgs.GetInt( "_reach_pendingAction", "0" );
+	spawnArgs.SetInt( "_reach_pendingAction", 0 );
+	const int action = pending != 0 ? pending : ReachQuickActions::Read( sequence, previous, owner->usercmd.impulse );
 	if( sequence != previous ) { spawnArgs.SetInt( "_reach_lastImpulseSequence", sequence ); }
 	if( action != 0 && cvarSystem->GetCVarBool( "g_debugWeapon" ) )
 	{
-		gameLocal.Printf( "[ReachInput r14] native impulse %d received; sequence=%d\n", owner->usercmd.impulse, sequence );
+		gameLocal.Printf( "[ReachInput r15] weapon consumed action=%d; impulse=%d sequence=%d\n", action, owner->usercmd.impulse, sequence );
 	}
 	idThread::ReturnFloat( action );
 }
 
 void idWeapon::Event_ReachGrenadesAvailable()
 {
-	if( owner == NULL || common->IsMultiplayer() || !ReachCombatWeapon( renderEntity ) )
+	if( owner == NULL || common->IsMultiplayer() || !ReachCombatWeapon( spawnArgs ) )
 	{
 		idThread::ReturnFloat( 0 );
 		return;
@@ -36,7 +57,7 @@ void idWeapon::Event_ReachThrowFrag()
 {
 	idThread::ReturnFloat( 0 );
 	if( owner == NULL || owner->health <= 0 || common->IsMultiplayer() ||
-		common->IsClient() || !ReachCombatWeapon( renderEntity ) )
+		common->IsClient() || !ReachCombatWeapon( spawnArgs ) )
 	{
 		return;
 	}

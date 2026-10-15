@@ -106,6 +106,8 @@ void CheckScope()
 	const char* rifle = "models/md5/weapons/reach_ar/view.md5mesh";
 	Require( ReachProjection::Eligible( rifle, true, true, 1, 1, false, false ), "owned rifle rejected" );
 	Require( ReachProjection::Eligible( "reach_ar_flash.prt", true, true, 1, 1, false, false ), "owned flash rejected" );
+	Require( ReachProjection::Eligible( "models/md5/weapons/reach_ar/view_appearance_r15.md5mesh", true, true, 1, 1, false, false ), "repaired rifle rejected" );
+	Require( ReachProjection::Eligible( "reach_ar_flash_r15.prt", true, true, 1, 1, false, false ), "repaired flash rejected" );
 	Require( !ReachProjection::Eligible( "models/md5/weapons/machinegun/view.md5mesh", true, true, 1, 1, false, false ), "stock weapon modified" );
 	Require( !ReachProjection::Eligible( rifle, false, true, 1, 1, false, false ), "untagged rifle modified" );
 	Require( !ReachProjection::Eligible( rifle, true, false, 1, 1, false, false ), "world model modified" );
