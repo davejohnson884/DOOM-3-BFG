@@ -23,14 +23,21 @@ jobs:
       - name: Check converter math and build standalone Windows tool
         shell: pwsh
         run: |
-          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python tools/reach/assets/test_appearance.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachArAppearance --paths tools/reach/assets --distpath build/reach-appearance --workpath build/appearance-work --specpath build tools/reach/assets/build_appearance.py
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & build/reach-appearance/ReachArAppearance.exe --help
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory build -Force | Out-Null
+          function Check-Step([string]$label) {
+            if ($LASTEXITCODE -ne 0) {
+              Get-Content build/appearance-step.log | Select-Object -Last 16 | ForEach-Object { Write-Host "::error title=${label}::$_" }
+              exit 1
+            }
+          }
+          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0 2>&1 | Tee-Object build/appearance-step.log
+          Check-Step 'Dependencies'
+          python tools/reach/assets/test_appearance.py 2>&1 | Tee-Object build/appearance-step.log
+          Check-Step 'Appearance tests'
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachArAppearance --paths tools/reach/assets --distpath build/reach-appearance --workpath build/appearance-work --specpath build tools/reach/assets/build_appearance.py 2>&1 | Tee-Object build/appearance-step.log
+          Check-Step 'Appearance packaging'
+          & build/reach-appearance/ReachArAppearance.exe --help 2>&1 | Tee-Object build/appearance-step.log
+          Check-Step 'Appearance runtime'
           Copy-Item tools/reach/assets/Build-Reach-appearance.cmd, tools/reach/assets/APPEARANCE.txt build/reach-appearance/
           New-Item -ItemType Directory build/reach-appearance/licenses -Force | Out-Null
           Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-appearance/licenses/Reclaimer.txt
