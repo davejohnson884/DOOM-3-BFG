@@ -41,7 +41,7 @@ jobs:
             Get-Content build/reach-assets-build.log | Where-Object { $_ -match 'error ' } | Select-Object -Unique -First 15 | ForEach-Object { Write-Host "::error title=Asset tool build::$_" }
             exit 1
           }
-          Copy-Item tools/reach/assets/Collect-Reach-assets.cmd, tools/reach/assets/ASSETS.md build/reach-asset-tools/
+          Copy-Item tools/reach/assets/Collect-Reach-assets.cmd, tools/reach/assets/Collect-Reach-effects.cmd, tools/reach/assets/ASSETS.md, tools/reach/assets/EFFECTS.txt build/reach-asset-tools/
           New-Item -ItemType Directory build/reach-asset-tools/licenses -Force | Out-Null
           Copy-Item build/asset-deps/reclaimer/LICENSE build/reach-asset-tools/licenses/Reclaimer.txt
           Copy-Item build/asset-deps/tagtool/LICENSE build/reach-asset-tools/licenses/TagTool.txt

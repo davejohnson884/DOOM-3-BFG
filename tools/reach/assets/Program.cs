@@ -34,15 +34,16 @@ internal static class Program
             NativeLibrary.SetDllImportResolver(typeof(TagTool.Audio.FMOD).Assembly, ResolveNative);
             NativeLibrary.SetDllImportResolver(typeof(Program).Assembly, ResolveNative);
             if (args.Length == 1 && args[0] == "--selftest") return SelfTest();
-            if (args.Length != 4 || args[0] != "--mcc" || args[2] != "--out")
-                throw new ArgumentException("Usage: ReachAssetExport --mcc <MCC install> --out <output folder>");
+            bool effectsOnly = args.Length == 5 && args[4] == "--effects";
+            if ((!effectsOnly && args.Length != 4) || args[0] != "--mcc" || args[2] != "--out")
+                throw new ArgumentException("Usage: ReachAssetExport --mcc <MCC install> --out <output folder> [--effects]");
             var install = Path.GetFullPath(args[1]).TrimEnd(Path.DirectorySeparatorChar);
             var output = Path.GetFullPath(args[3]);
             if (output.Equals(install, StringComparison.OrdinalIgnoreCase) || output.StartsWith(install + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Output must be outside the MCC install.");
             var map = Path.Combine(install, "haloreach", "maps", "forge_halo.map");
             if (!File.Exists(map)) throw new FileNotFoundException("Reach forge_halo.map was not found.", map);
-            var bundle = Path.Combine(output, "reach-assets-" + Guid.NewGuid().ToString("N"));
+            var bundle = Path.Combine(output, (effectsOnly ? "reach-effects-" : "reach-assets-") + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(bundle);
             Console.WriteLine("Reading MCC Reach files. Neither game will be launched or modified.");
             var cache = CacheFactory.ReadCacheFile(map);
@@ -51,6 +52,7 @@ internal static class Program
             var weapon = cache.TagIndex.Where(t => t.ClassCode == "weap" && Normalize(t.TagName).Contains("assault_rifle"))
                 .OrderBy(t => t.TagName.Length).FirstOrDefault() ?? throw new InvalidDataException("No assault rifle weapon tag was found.");
             Console.WriteLine($"Assault rifle: {weapon.TagName}; map build: {cache.BuildString}");
+            if (effectsOnly) return CollectEffects(cache, weapon, bundle);
             var weaponReferences = new List<IIndexItem>();
             SaveJson(Path.Combine(bundle, "weapon-raw.json"), RawTagCollector.Capture(weapon, Schema("weap.xml"), weaponReferences));
             CaptureCombatReferences(weaponReferences, bundle);
@@ -127,6 +129,77 @@ internal static class Program
             }) })
         });
         Exports.Add(new { kind = "skinned-model", tag = tag.TagName, file = "models/" + name + "/" + name + ".rmf" });
+    }
+
+    // Follow actual tag references, including bitmap subimages/arrays. Do not
+    // substitute generic art when an effect cannot be decoded.
+    static int CollectEffects(ICacheFile cache, IIndexItem weapon, string bundle)
+    {
+        var roots = new List<IIndexItem> { weapon };
+        var frag = cache.TagIndex.Where(t => t.ClassCode == "proj" &&
+            Normalize(t.TagName).Contains("frag") && Normalize(t.TagName).Contains("grenade")).ToArray();
+        roots.AddRange(frag);
+        // Capture the source shader constants for the already exported FP art.
+        var armMaterials = new HashSet<string> { "spartan_fp_armor", "spartan_fp_glove",
+            "spartan_rubber_suit", "spartan_armor", "spartan_forearm_tricorder" };
+        roots.AddRange(cache.TagIndex.Where(t => t.ClassCode == "rmsh" &&
+            (Normalize(t.TagName).Contains("/assault_rifle/") ||
+             (Normalize(t.TagName).Contains("/spartans/") && armMaterials.Contains(Normalize(t.TagName).Split('/').Last())))));
+        if (frag.Length == 0) Errors.Add("No frag projectile found in forge_halo.map; candidate list retained in manifest.");
+        var supported = new HashSet<string> { "weap", "proj", "jpt!", "effe", "prt3", "pmdf",
+            "hlmt", "mode", "rmsh", "rmtr", "rmfl", "rmcs", "rmw ", "rmfu", "rmfs", "rmmx", "rmhg", "rmss", "rmt2" };
+        var pending = new Queue<IIndexItem>(roots);
+        var seen = new HashSet<int>();
+        var dependencies = new List<object>();
+        while (pending.TryDequeue(out var tag))
+        {
+            if (!seen.Add(tag.Id)) continue;
+            if (seen.Count > 256) { Errors.Add("Focused capture reached the 256-tag limit; see dependencies for uncaptured references."); break; }
+            if (tag.ClassCode == "bitm") {
+                Attempt("effect bitmap " + tag.TagName, () => {
+                    if (!ContentFactory.TryGetBitmapContent(tag, out var provider)) throw new InvalidDataException("No bitmap decoder available.");
+                    var bitmap = provider.GetContent();
+                    if (bitmap.SubmapCount > 64) throw new InvalidDataException("Bitmap exceeds 64 subimages.");
+                    for (int i = 0; i < bitmap.SubmapCount; i++) {
+                        var file = "effect-bitmaps/" + SafeName(tag.TagName) + "_" + i.ToString("D3") + ".dds";
+                        Directory.CreateDirectory(Path.Combine(bundle, "effect-bitmaps"));
+                        bitmap.ToDds(i).WriteToDisk(Path.Combine(bundle, file));
+                        Exports.Add(new { kind = "effect-bitmap", tag = tag.TagName, submap = i, gamma = bitmap.GetSubmapGamma(i), file });
+                    }
+                });
+                continue;
+            }
+            if (!supported.Contains(tag.ClassCode)) continue;
+            Attempt("effect metadata " + tag.TagName, () => {
+                if (tag.ClassCode == "mode") ExportModel(tag, bundle);
+                var references = new List<IIndexItem>();
+                var schema = Schema(tag.ClassCode.Trim() + ".xml");
+                var file = "effect-metadata/" + SafeName(tag.TagName) + "." + tag.ClassCode.Trim() + ".json";
+                SaveJson(Path.Combine(bundle, file), RawTagCollector.Capture(tag, schema, references));
+                Exports.Add(new { kind = "effect-metadata", tag = tag.TagName, tagClass = tag.ClassCode, file });
+                foreach (var target in references) {
+                    dependencies.Add(new { source = tag.TagName, sourceClass = tag.ClassCode, target = target.TagName, targetClass = target.ClassCode });
+                    // Avoid walking the AR's animation graphs, sounds and unrelated
+                    // world models. Frag proj -> hlmt -> mode remains included.
+                    if (tag.Id == weapon.Id && target.ClassCode is not ("effe" or "prt3")) continue;
+                    if (supported.Contains(target.ClassCode) || target.ClassCode == "bitm") pending.Enqueue(target);
+                }
+            });
+        }
+        SaveJson(Path.Combine(bundle, "manifest.json"), new {
+            schemaVersion = 2, purpose = "Reach AR flash/casings, frag projectile/art, FP material constants",
+            cache.BuildString, reclaimer = ReclaimerRevision, assembly = AssemblyRevision,
+            roots = roots.Select(t => new { tag = t.TagName, tagClass = t.ClassCode }),
+            fragCandidates = cache.TagIndex.Where(t => Normalize(t.TagName).Contains("frag") && t.ClassCode is "proj" or "mode" or "weap")
+                .Select(t => new { tag = t.TagName, tagClass = t.ClassCode }),
+            dependencies, exports = Exports, errors = Errors,
+            status = "Private source assets for conversion. Does not install or modify either game."
+        });
+        var zip = bundle + ".zip";
+        ZipFile.CreateFromDirectory(bundle, zip, CompressionLevel.Optimal, false);
+        Console.WriteLine($"Focused capture complete: {Exports.Count} exports; {Errors.Count} recorded issues.");
+        PrintUploadFiles(zip);
+        return 0;
     }
 
     static void CaptureCombatReferences(IEnumerable<IIndexItem> roots, string bundle)
@@ -346,6 +419,10 @@ internal static class Program
         var root = Path.Combine(Path.GetTempPath(), "reach-asset-test-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
         try {
+            foreach (var schema in new[] { "weap", "proj", "jpt!", "effe", "prt3", "pmdf", "hlmt", "mode", "rmsh" }) {
+                var xml = System.Xml.Linq.XDocument.Load(Schema(schema + ".xml"));
+                if (xml.Root?.Attribute("baseSize") == null) throw new Exception("Missing effect schema: " + schema);
+            }
             foreach (var bad in new[] { "../escape", "C:/escape", "/escape", "ok/../../escape" }) {
                 bool rejected = false; try { SafeName(bad); } catch (InvalidDataException) { rejected = true; }
                 if (!rejected) throw new Exception("Unsafe path was accepted.");

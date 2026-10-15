@@ -1,0 +1,12 @@
+1. Extract the complete collection-tool ZIP into a new folder outside both games.
+2. Double-click Collect-Reach-effects.cmd. No terminal or administrator mode needed.
+3. Attach the new reach-effects-....zip here. If numbered .part001 files are
+   produced, attach all numbered parts instead of the large ZIP.
+
+This reads the installed MCC Reach forge_halo.map and writes only into this
+tool folder. Neither game is launched or modified. It follows AR firing effect
+references, collects bitmap subimages, the frag projectile/model and relevant
+FP shader constants. Failures are recorded in manifest.json.
+
+The TACPAD mesh and armor color masks are already in the previous export;
+this collection supplies the missing effects/frag art and shader metadata.
