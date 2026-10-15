@@ -1,0 +1,19 @@
+Extract this tool ZIP outside the game folder. Close the game.
+Double-click Build-Reach-appearance.cmd, then select the original
+reach-assets-....zip that the earlier collector created on your PC.
+Choose the original ZIP, not its numbered .part001 pieces.
+
+The tool reads that ZIP and the installed reach/zzz_reach_ar.pk4, then creates:
+  reach/zzzzzzzz_reach_appearance.pk4
+Start Play-Reach-projection.cmd as usual. No new launch wrapper is needed.
+To undo, remove that one appearance PK4. Original assets are never overwritten.
+
+Adds the Carter/TACPAD accessory to the existing Spartan arms. Steel-grey
+armor uses the source color masks; rubber and exposed surfaces remain separate.
+Restores source specular tints, diffuse detail and normal-detail textures using
+standard BFG materials. Counter materials and the accepted r12 pose are retained.
+All 25 clips retain their motion; only bounding boxes expand for the accessory.
+
+This is a first visual match, not an exact recreation of Blam's lighting.
+Detail maps are baked at base texture resolution. Please test idle, reload,
+sprint and melee/grenade clips for accessory clipping on your PC.
