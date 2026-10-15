@@ -20,16 +20,21 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Package automatic position preset
+      - name: Check rifle-only translation and retained weapon logic
         shell: pwsh
         run: |
-          python tools/reach/position/build_preset.py build/Reach-rifle-preset-r11.zip
+          python tools/reach/position/check_rifle_pose.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package automatic rifle-only position preset
+        shell: pwsh
+        run: |
+          python tools/reach/position/build_preset.py build/Reach-rifle-preset-r12.zip
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify both Windows CMD launchers load the installed preset
         shell: powershell
         run: ./tools/reach/position/test-preset-launch.ps1
       - uses: actions/upload-artifact@v4
         with:
-          name: reach-rifle-preset-r11
-          path: build/Reach-rifle-preset-r11.zip
+          name: reach-rifle-preset-r12
+          path: build/Reach-rifle-preset-r12.zip
           if-no-files-found: error

@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $fixtureRoot = Join-Path $env:RUNNER_TEMP ('Reach Preset Launch ' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
-Expand-Archive -LiteralPath build/Reach-rifle-preset-r11.zip -DestinationPath $fixtureRoot
+Expand-Archive -LiteralPath build/Reach-rifle-preset-r12.zip -DestinationPath $fixtureRoot
 $env:REACH_PRESET_FIXTURE_ROOT = $fixtureRoot
 @'
 import os, sys, zipfile
@@ -9,16 +9,16 @@ from pathlib import Path
 sys.path.insert(0, 'tools/reach/native')
 import build_candidate
 sys.path.insert(0, 'tools/reach/position')
-import build_pose
+import build_preset
 root = Path(os.environ['REACH_PRESET_FIXTURE_ROOT'])
 (root/'reach/zzzzz_reach_projection.pk4').write_bytes(build_candidate.overlay())
 (root/'reach/zzz_reach_ar.pk4').write_text('asset fixture only')
 with zipfile.ZipFile(root/'reach/zzzzzz_reach_position.pk4') as archive:
     assert archive.testzip() is None
-    assert archive.read('script/weapon_machinegun.script') == build_pose.script()
-    assert archive.read('def/reach_presentation.def') == build_pose.DECLARATION
+    assert archive.read('script/weapon_machinegun.script') == build_preset.script()
+    assert archive.read('def/reach_presentation.def') == build_preset.DECLARATION
 '@ | python -
-if ($LASTEXITCODE -ne 0) { throw 'Installed package or retained r10 script check failed.' }
+if ($LASTEXITCODE -ne 0) { throw 'Installed package or rifle-only script check failed.' }
 
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
 & $compiler /nologo /platform:x64 /target:exe ('/out:' + (Join-Path $fixtureRoot 'ReachDebugLog.exe')) tools/reach/rbdoom/ReachDebugLog.cs
@@ -35,9 +35,12 @@ using System.Collections.Generic;
 public static class PresetFixture {
     static string root = AppDomain.CurrentDomain.BaseDirectory;
     static Dictionary<string, string> vars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
-        {"g_gunX","3"}, {"g_gunY","0"}, {"g_gunZ","0"},
+        {"g_gunX","-4"}, {"g_gunY","4"}, {"g_gunZ","1"},
         {"reach_arPitch","9"}, {"reach_arYaw","9"}, {"reach_arRoll","0"},
         {"g_gunScale","0.7"}, {"g_fov","100"}, {"r_fullscreen","1"}, {"jobs_numThreads","8"}
+    };
+    static Dictionary<string, string> defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) {
+        {"g_gunX","3"}, {"g_gunY","0"}, {"g_gunZ","0"}
     };
     static string ReadConfig(string name) {
         string loose = Path.Combine(root, "reach", name);
@@ -60,6 +63,7 @@ public static class PresetFixture {
             if (line.Length == 0 || line.StartsWith("//")) continue;
             string[] parts = line.Split(new char[] {' ', '\t'}, 3, StringSplitOptions.RemoveEmptyEntries);
             if (parts[0] == "exec") Exec(parts[1], depth + 1);
+            else if (parts[0] == "reset") vars[parts[1]] = defaults[parts[1]];
             else if (parts[0] == "set" || parts[0] == "seta") vars[parts[1]] = parts[2].Trim('"');
         }
     }
@@ -70,7 +74,7 @@ public static class PresetFixture {
                 if (args[i] == "+exec") Exec(args[++i], 0);
                 else if (args[i] == "+set") { string name = args[++i]; vars[name] = args[++i]; }
             }
-            string[] names = {"g_gunX","g_gunY","g_gunZ","reach_arPitch","reach_arYaw","reach_arRoll","g_gunScale","g_fov","r_fullscreen","jobs_numThreads","r_reachWeaponFov"};
+            string[] names = {"g_gunX","g_gunY","g_gunZ","reach_arGunX","reach_arGunY","reach_arGunZ","reach_arPitch","reach_arYaw","reach_arRoll","g_gunScale","g_fov","r_fullscreen","jobs_numThreads","r_reachWeaponFov"};
             var result = new List<string>();
             foreach (string name in names) result.Add(name + "=" + vars[name]);
             File.WriteAllLines(Path.Combine(root, "settings.txt"), result.ToArray());
@@ -87,7 +91,7 @@ if ($LASTEXITCODE -ne 0) { throw 'CMD/config fixture compilation failed.' }
 
 $settings = Join-Path $fixtureRoot 'settings.txt'
 $arguments = Join-Path $fixtureRoot 'arguments.txt'
-$expectedSettings = @('g_gunX=-4', 'g_gunY=4', 'g_gunZ=1', 'reach_arPitch=0', 'reach_arYaw=0', 'reach_arRoll=-3', 'g_gunScale=0.7', 'g_fov=100', 'r_fullscreen=1', 'jobs_numThreads=8', 'r_reachWeaponFov=54')
+$expectedSettings = @('g_gunX=3', 'g_gunY=0', 'g_gunZ=0', 'reach_arGunX=-4', 'reach_arGunY=4', 'reach_arGunZ=1', 'reach_arPitch=0', 'reach_arYaw=0', 'reach_arRoll=-3', 'g_gunScale=0.7', 'g_fov=100', 'r_fullscreen=1', 'jobs_numThreads=8', 'r_reachWeaponFov=54')
 foreach ($diagnostic in @($false, $true)) {
     $name = if ($diagnostic) { 'Play-Reach-projection-diagnostic.cmd' } else { 'Play-Reach-projection.cmd' }
     $command = '"' + (Join-Path $fixtureRoot $name) + '"'
@@ -109,5 +113,5 @@ foreach ($diagnostic in @($false, $true)) {
 Remove-Item -LiteralPath (Join-Path $fixtureRoot 'reach/reach_pose.cfg')
 & cmd.exe /d /c ('"' + (Join-Path $fixtureRoot 'Play-Reach-projection.cmd') + '" <nul')
 if ($LASTEXITCODE -ne 1 -or (Test-Path -LiteralPath $arguments)) { throw 'Missing preset was not rejected before launch.' }
-Write-Host '::notice title=Automatic Reach preset::PASS: both packaged CMD files load -4/4/1 and 0/0/-3 over stale saved values; scale/world-FOV/display/thread fixture values retained; missing preset rejected.'
+Write-Host '::notice title=Rifle-only Reach preset::PASS: both packaged CMD files restore stock global offsets and load rifle-only -4/4/1 and 0/0/-3; scale/world-FOV/display/thread fixture values retained; missing preset rejected.'
 exit 0

@@ -1,17 +1,29 @@
-"""Package the owner's gun settings with launchers that load them automatically."""
+"""Package rifle-only gun settings with launchers that load them automatically."""
 import argparse
 import hashlib
 import io
 import json
 from pathlib import Path
+import re
 import subprocess
 import zipfile
 
-from build_pose import script, SCRIPT_PATH
+from build_pose import script as rotation_script, SCRIPT_PATH, PATTERN
 from build_position import ROOT, REPO, DECL_PATH, DECLARATION, OFFSET, PK4_PATH
 from build_candidate import launcher as projection_launcher
 
 CONFIG_PATH = 'reach/reach_pose.cfg'
+
+
+def script():
+    original = rotation_script().decode()
+    body = (ROOT / 'reach_ar_pose.script').read_text().strip()
+    result, count = re.subn(PATTERN, lambda _: body, original, flags=re.S)
+    if count != 1:
+        raise ValueError('Expected one existing presentation method')
+    if re.sub(PATTERN, '', result, flags=re.S) != re.sub(PATTERN, '', original, flags=re.S):
+        raise ValueError('Unexpected changes to weapon logic or object fields')
+    return result.encode()
 
 
 def launcher(diagnostic=False):
@@ -20,12 +32,12 @@ def launcher(diagnostic=False):
         raise ValueError('Expected one projection config command')
     text = text.replace('+exec reach_projection.cfg', '+exec reach_pose.cfg')
     guard = '''if not exist "%~dp0reach\\reach_pose.cfg" (
-  echo Extract the complete r11 ZIP here, including reach\\reach_pose.cfg.
+  echo Extract the complete r12 ZIP here, including reach\\reach_pose.cfg.
   pause
   exit /b 1
 )
 if not exist "%~dp0reach\\zzzzzz_reach_position.pk4" (
-  echo Extract the complete r11 ZIP here, including the position PK4.
+  echo Extract the complete r12 ZIP here, including the position PK4.
   pause
   exit /b 1
 )
@@ -41,8 +53,8 @@ def build(output):
     output = Path(output)
     if output.exists():
         raise FileExistsError('Keep the previous package; choose a new output name')
-    # Game script and declaration are identical to r10. Only startup loading
-    # changes; there is no new script checksum or rotation trial in this update.
+    # Retain the r9 declaration and r10 rotation. The added translation is
+    # scoped to this rifle, instead of changing every weapon through g_gun.
     inner = io.BytesIO()
     with zipfile.ZipFile(inner, 'w', zipfile.ZIP_DEFLATED) as archive:
         archive.writestr(DECL_PATH, DECLARATION)
@@ -55,15 +67,16 @@ def build(output):
         'REACH-PRESET-README.txt': (ROOT / 'PRESET-README.txt').read_bytes(),
     }
     report = {
-        'revision': 'r11',
+        'revision': 'r12',
         'toolCommit': subprocess.check_output(
             ['git', 'rev-parse', 'HEAD'], cwd=REPO, text=True).strip(),
         'requires': 'Installed r8 projection candidate and existing private Reach assets',
         'modelOffset': OFFSET,
-        'gunSettings': {'g_gunX': -4, 'g_gunY': 4, 'g_gunZ': 1},
+        'rifleSettings': {'reach_arGunX': -4, 'reach_arGunY': 4, 'reach_arGunZ': 1},
+        'globalGunSettings': 'Restore host defaults with reset; do not set Reach values globally',
         'angleSettings': {'reach_arPitch': 0, 'reach_arYaw': 0, 'reach_arRoll': -3},
         'config': CONFIG_PATH,
-        'scriptChangedFromR10': False,
+        'scriptChangedFromR10': True,
         'projectionChanged': False,
         'executableChanged': False,
         'runtimeTest': 'Not run in cloud; Windows CMD/config fixture tested separately',
@@ -79,7 +92,7 @@ def build(output):
             raise ValueError('Package CRC verification failed')
     print(json.dumps({'package': str(output), 'bytes': output.stat().st_size,
                       'sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
-                      'gunSettings': report['gunSettings']}))
+                      'rifleSettings': report['rifleSettings']}))
 
 
 if __name__ == '__main__':

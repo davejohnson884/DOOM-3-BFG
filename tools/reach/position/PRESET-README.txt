@@ -1,37 +1,39 @@
-Reach position preset r11 - automatically applies your gun settings
+Reach AR position preset r12 - rifle-only offsets applied automatically
 
 1. Close the game. Extract this ZIP beside ReachRBDoom3BFG.exe.
 2. Overwrite both Play-Reach-projection CMD files and the position PK4.
    Copy the included reach/reach_pose.cfg as well.
-3. Launch Play-Reach-projection.cmd. No manual console exec or gun settings
-   are needed. Select another weapon and then the rifle to reapply its pose.
+3. Launch Play-Reach-projection.cmd. No manual exec or g_gun edits are needed.
+   Test a fresh map first because the rifle presentation script has changed.
 
-The new launcher loads this short preset after saved startup settings:
-    g_gunX -4
-    g_gunY 4
-    g_gunZ 1
-    reach_arPitch 0
-    reach_arYaw 0
-    reach_arRoll -3
-The console prints "Reach r11 pose preset loaded" followed by those actual
-cvar values. If the preset file or overlay is missing, the launcher stops
-and identifies the missing installation file.
+Your chosen -4, 4, 1 anchor now belongs only to the Reach assault rifle:
+    reach_arGunX -4
+    reach_arGunY 4
+    reach_arGunZ 1
+The preset restores g_gunX/Y/Z to Doom's stock defaults, undoing the earlier
+manual global edits. Other weapons retain their normal placement. The rifle
+script adds its own scale-corrected root translation and the existing
+-3-degree roll. It does not set any global cvar or add frame polling.
 
-The script, model offset and -3-degree roll are identical to r10. This update
-fixes automatic loading of your position and the angle preset. If you already
-had all six values applied in r10, the appearance should remain the same.
-No new executable, DLL, shader, animation or extracted game asset is included.
-Gun scale, world FOV, display and threading settings are not set by the preset.
-It loads the existing r8 projection config before applying the six values.
+The game console prints "Reach AR r12 pose preset loaded" and the six
+rifle-specific position/angle settings. Both normal and diagnostic CMDs
+load the preset after saved startup settings. A missing preset or overlay
+stops the launcher with an explanation.
 
-The g_gun values are the engine's global weapon offsets, as when you set them
-manually. Angle controls remain rifle-only. You can edit the included small
-CFG to retain later tuning; console changes last until the next preset launch.
+The accepted projection, executable and r9 model offset are retained. The
+shift is based on your original g_gun anchor, not a second -4/4/1 translation
+added on top. The script accounts for the current g_gunScale without setting
+it. Gun bob and animation still move the rig naturally.
+
+For later rifle-only tuning, edit the included short CFG, or use
+set reach_arGunX / reach_arGunY / reach_arGunZ and the existing
+reach_arPitch / reach_arYaw / reach_arRoll console controls. Reselect the
+rifle after console edits. The CFG is applied again on each preset launch.
 
 Keep the r8 projection files, including ReachRBDoom3BFG.exe and
-reach/zzzzz_reach_projection.pk4, installed. The diagnostic CMD uses the
-existing ReachDebugLog.exe if needed. Normal play launches the game directly.
+reach/zzzzz_reach_projection.pk4, installed. No executable, DLL, shader,
+animation or extracted game asset is included. World FOV, display and
+threading options are not changed. Older script saves may be incompatible.
 
-R11 adds no script changes relative to r10. Saves made with older weapon
-scripts may still be incompatible. Packaging and Windows launch/config
-fixtures were checked; the game was not run in the cloud.
+Package, translation math and Windows CMD/config fixtures were checked.
+The game was not run in the cloud; owner framing and action checks remain.

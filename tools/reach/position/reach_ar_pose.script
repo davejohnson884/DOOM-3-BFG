@@ -1,0 +1,64 @@
+void weapon_machinegun::ReachApplyViewPose() {
+    float reach_root_joint;
+    float reach_pose_scale;
+    vector reach_pose_angles;
+    vector reach_pose_pivot;
+    vector reach_pose_rotated_pivot;
+    vector reach_pose_shift;
+    vector reach_pose_gun_target;
+    vector reach_pose_host_gun;
+
+    setShaderParm(6, 1);
+    reach_pose_angles = '0 0 -3';
+    if (sys.getcvar("reach_arPitch") != "") {
+        reach_pose_angles_x = sys.strToFloat(sys.getcvar("reach_arPitch"));
+    }
+    if (sys.getcvar("reach_arYaw") != "") {
+        reach_pose_angles_y = sys.strToFloat(sys.getcvar("reach_arYaw"));
+    }
+    if (sys.getcvar("reach_arRoll") != "") {
+        reach_pose_angles_z = sys.strToFloat(sys.getcvar("reach_arRoll"));
+    }
+    // These are rifle-only targets for the anchor formerly tuned via g_gun.
+    reach_pose_gun_target = '-4 4 1';
+    if (sys.getcvar("reach_arGunX") != "") {
+        reach_pose_gun_target_x = sys.strToFloat(sys.getcvar("reach_arGunX"));
+    }
+    if (sys.getcvar("reach_arGunY") != "") {
+        reach_pose_gun_target_y = sys.strToFloat(sys.getcvar("reach_arGunY"));
+    }
+    if (sys.getcvar("reach_arGunZ") != "") {
+        reach_pose_gun_target_z = sys.strToFloat(sys.getcvar("reach_arGunZ"));
+    }
+    reach_pose_host_gun_x = sys.strToFloat(sys.getcvar("g_gunX"));
+    reach_pose_host_gun_y = sys.strToFloat(sys.getcvar("g_gunY"));
+    reach_pose_host_gun_z = sys.strToFloat(sys.getcvar("g_gunZ"));
+    reach_pose_scale = sys.strToFloat(sys.getcvar("g_gunScale"));
+
+    reach_root_joint = getJointHandle("origin");
+    if (reach_root_joint >= 0) {
+        reach_pose_pivot = '15.84341446 -4.47929218 0.28925242';
+        reach_pose_rotated_pivot = sys.angToForward(reach_pose_angles) * reach_pose_pivot_x
+            - sys.angToRight(reach_pose_angles) * reach_pose_pivot_y
+            + sys.angToUp(reach_pose_angles) * reach_pose_pivot_z;
+        reach_pose_shift = reach_pose_pivot - reach_pose_rotated_pivot;
+
+        // Player gun origin is unscaled; joint offsets are scaled with the
+        // model. Convert only this rifle's anchor difference to joint units.
+        // Avoid dividing by zero when the host hides its rig with zero scale.
+        if (reach_pose_scale != 0) {
+            reach_pose_shift = reach_pose_shift
+                + (reach_pose_gun_target - reach_pose_host_gun) * (1 / reach_pose_scale);
+        }
+        setJointAngle(reach_root_joint, JOINTMOD_WORLD, reach_pose_angles);
+        setJointPos(reach_root_joint, JOINTMOD_LOCAL, reach_pose_shift);
+    }
+    ReachTrace("r12 rifle anchor: X=" + reach_pose_gun_target_x
+        + " Y=" + reach_pose_gun_target_y + " Z=" + reach_pose_gun_target_z);
+    if (sys.getcvar("g_debugWeapon") == "1") {
+        ReachTrace("rifle angles: pitch=" + reach_pose_angles_x + " yaw="
+            + reach_pose_angles_y + " roll=" + reach_pose_angles_z);
+        ReachTrace("host gun position: X=" + sys.getcvar("g_gunX") + " Y=" + sys.getcvar("g_gunY")
+            + " Z=" + sys.getcvar("g_gunZ") + " Scale=" + sys.getcvar("g_gunScale"));
+    }
+}
