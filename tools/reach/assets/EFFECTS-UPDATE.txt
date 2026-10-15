@@ -1,0 +1,22 @@
+Install the complete r14 combat update first, keeping the TACPAD and older PK4s.
+Extract this converter ZIP outside both games.
+Double-click Build-Reach-effects.cmd, then select the new
+reach-effects-717618e5b2e94d68b4d8007af4608a51.zip you just collected.
+Copy the generated reach folder into your Doom 3 BFG game folder.
+Start Play-Reach-projection.cmd. No manual exec or new play wrapper is needed.
+
+Adds the actual Reach round/long flash artwork and palettes, the Reach frag
+model with normal/specular materials, Reach bounce/explosion sounds and an
+explosion assembled from the exported Reach particle textures.
+The frag uses the source first-floor-bounce timer (.6-.65 seconds), separate
+1.4-second arming minimum, source damage magnitude and radius. The r14 native
+extension implements this timer only for the Reach frag.
+
+BFG still supplies physics, lighting, splash falloff and particle rendering.
+Throw speed, absolute gravity and particle curves/scales remain approximations.
+Missing Blam lighting lookup textures are not needed by these BFG materials.
+The accepted AR pose, TACPAD arms, ammo counter and other weapon assets remain.
+
+To undo these visuals/tuning, remove reach/zzzzzzzzzz_reach_effects.pk4.
+Converter source is included and available at:
+https://github.com/davejohnson884/DOOM-3-BFG/tree/reach-combat/tools/reach/assets

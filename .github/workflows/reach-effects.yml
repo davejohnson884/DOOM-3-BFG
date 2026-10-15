@@ -1,0 +1,55 @@
+name: Reach flash and frag converter
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - 'tools/reach/assets/build_effects.py'
+      - 'tools/reach/assets/test_effects.py'
+      - 'tools/reach/assets/Build-Reach-effects.cmd'
+      - 'tools/reach/assets/EFFECTS-UPDATE.txt'
+      - '.github/workflows/reach-effects.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify and freeze the source-asset converter
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory build -Force | Out-Null
+          function Check-Step([string]$label) {
+            if ($LASTEXITCODE -ne 0) {
+              Get-Content build/effects-step.log | Select-Object -Last 16 | ForEach-Object { Write-Host "::error title=${label}::$_" }
+              exit 1
+            }
+          }
+          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0 2>&1 | Tee-Object build/effects-step.log
+          Check-Step 'Dependencies'
+          python tools/reach/assets/test_effects.py 2>&1 | Tee-Object build/effects-step.log
+          Check-Step 'Effect conversion checks'
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachEffectsConvert --paths tools/reach/assets --distpath build/reach-effects --workpath build/effects-work --specpath build tools/reach/assets/build_effects.py 2>&1 | Tee-Object build/effects-step.log
+          Check-Step 'Effect converter packaging'
+          & build/reach-effects/ReachEffectsConvert.exe --help 2>&1 | Tee-Object build/effects-step.log
+          Check-Step 'Effect converter runtime'
+          Copy-Item tools/reach/assets/Build-Reach-effects.cmd, tools/reach/assets/EFFECTS-UPDATE.txt build/reach-effects/
+          New-Item -ItemType Directory build/reach-effects/licenses -Force | Out-Null
+          Copy-Item COPYING.txt build/reach-effects/licenses/Project-GPL.txt
+          Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-effects/licenses/Reclaimer.txt
+          Copy-Item tools/reach/assets/rmf_reader/UPSTREAM.md build/reach-effects/licenses/Reclaimer-source.md
+          New-Item -ItemType Directory build/reach-effects/source -Force | Out-Null
+          Copy-Item tools/reach/assets/*.py, tools/reach/assets/requirements.txt build/reach-effects/source/
+          Copy-Item -Recurse tools/reach/assets/rmf_reader build/reach-effects/source/
+          python tools/reach/assets/copy_licenses.py build/reach-effects/licenses
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reach-effects-tools-r14
+          path: build/reach-effects/
+          if-no-files-found: error
