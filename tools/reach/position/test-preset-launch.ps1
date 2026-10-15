@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+try {
 $fixtureRoot = Join-Path $env:RUNNER_TEMP ('Reach Preset Launch ' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $fixtureRoot -Force | Out-Null
 Expand-Archive -LiteralPath build/Reach-rifle-preset-r12.zip -DestinationPath $fixtureRoot
@@ -121,4 +122,13 @@ Remove-Item -LiteralPath (Join-Path $fixtureRoot 'reach/reach_pose.cfg')
 & cmd.exe /d /c ('"' + (Join-Path $fixtureRoot 'Play-Reach-projection.cmd') + '" <nul')
 if ($LASTEXITCODE -ne 1 -or (Test-Path -LiteralPath $arguments)) { throw 'Missing preset was not rejected before launch.' }
 Write-Host '::notice title=Rifle-only Reach preset::PASS: both packaged CMD files restore stock global offsets and load rifle-only -4/4/1 and 0/0/-3; scale/world-FOV/display/thread fixture values retained; missing preset rejected.'
+} catch {
+    $message = ($_.Exception.Message + ' ' + $_.InvocationInfo.PositionMessage).Replace('%', '%25').Replace([string][char]13, '%0D').Replace([string][char]10, '%0A')
+    Write-Host "::error title=Preset launch check::$message"
+    if ($fixtureRoot -and (Test-Path -LiteralPath (Join-Path $fixtureRoot 'fixture-error.txt'))) {
+        $details = (Get-Content -Raw -LiteralPath (Join-Path $fixtureRoot 'fixture-error.txt')).Replace('%', '%25').Replace([string][char]13, '%0D').Replace([string][char]10, '%0A')
+        Write-Host "::error title=Preset fixture::$details"
+    }
+    exit 1
+}
 exit 0
