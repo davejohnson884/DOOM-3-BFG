@@ -61,7 +61,11 @@ public static class PresetFixture {
         if (File.Exists(loose)) return File.ReadAllText(loose);
         // Published RBDoom sorts PK4 names, then searches in reverse order.
         string[] archives = Directory.GetFiles(Path.Combine(root, "reach"), "*.pk4");
-        Array.Sort(archives, StringComparer.OrdinalIgnoreCase);
+        // idStr::IcmpPath folds ASCII to lowercase. OrdinalIgnoreCase folds
+        // to uppercase, which orders '_' after 'Z' and reverses these names.
+        Array.Sort(archives, delegate(string a, string b) {
+            return StringComparer.Ordinal.Compare(a.ToLowerInvariant(), b.ToLowerInvariant());
+        });
         for (int i = archives.Length - 1; i >= 0; --i) {
             using (var archive = ZipFile.OpenRead(archives[i])) {
                 var entry = archive.GetEntry(name);
