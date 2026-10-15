@@ -28,9 +28,16 @@ with zipfile.ZipFile(root/build_preset.PK4_PATH) as archive:
 if ($LASTEXITCODE -ne 0) { throw 'Installed package or rifle-only script check failed.' }
 
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-& $compiler /nologo /platform:x64 /target:exe ('/out:' + (Join-Path $fixtureRoot 'ReachDebugLog.exe')) tools/reach/rbdoom/ReachDebugLog.cs
-if ($LASTEXITCODE -ne 0) { throw 'Existing diagnostic helper compilation failed.' }
-$fixtureCode = Join-Path $fixtureRoot 'fixture.cs'
+$captureOutput = Join-Path (Get-Location) 'build/ReachDebugLog.exe'
+$captureSource = Join-Path (Get-Location) 'tools/reach/rbdoom/ReachDebugLog.cs'
+$captureCompilerOutput = @(& $compiler /nologo /platform:x64 /target:exe ('/out:' + $captureOutput) $captureSource 2>&1)
+if ($LASTEXITCODE -ne 0) {
+    $details = ($captureCompilerOutput -join ' ').Replace('%', '%25')
+    Write-Host "::error title=Preset helper compiler::$details"
+    throw 'Existing diagnostic helper compilation failed.'
+}
+Copy-Item -LiteralPath $captureOutput -Destination (Join-Path $fixtureRoot 'ReachDebugLog.exe')
+$fixtureCode = Join-Path (Get-Location) 'build/preset-fixture.cs'
 @'
 using System;
 using System.IO;
@@ -94,8 +101,14 @@ public static class PresetFixture {
     }
 }
 '@ | Set-Content -LiteralPath $fixtureCode
-& $compiler /nologo /platform:x64 /target:exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll ('/out:' + (Join-Path $fixtureRoot 'ReachRBDoom3BFG.exe')) $fixtureCode
-if ($LASTEXITCODE -ne 0) { throw 'CMD/config fixture compilation failed.' }
+$fixtureOutput = Join-Path (Get-Location) 'build/ReachPresetFixture.exe'
+$fixtureCompilerOutput = @(& $compiler /nologo /platform:x64 /target:exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll ('/out:' + $fixtureOutput) $fixtureCode 2>&1)
+if ($LASTEXITCODE -ne 0) {
+    $details = ($fixtureCompilerOutput -join ' ').Replace('%', '%25')
+    Write-Host "::error title=Preset game fixture compiler::$details"
+    throw 'CMD/config fixture compilation failed.'
+}
+Copy-Item -LiteralPath $fixtureOutput -Destination (Join-Path $fixtureRoot 'ReachRBDoom3BFG.exe')
 
 $settings = Join-Path $fixtureRoot 'settings.txt'
 $arguments = Join-Path $fixtureRoot 'arguments.txt'
