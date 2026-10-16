@@ -1,0 +1,40 @@
+REACH r17 - restore the working TACPAD and original-resolution materials
+
+Close Doom. Extract this package beside your existing ReachRBDoom3BFG.exe.
+Run Restore-Reach-materials.cmd once, then use Play-Reach-projection.cmd.
+
+The tool reads only your installed r15/r16 PK4s. No donor ZIPs, file pickers,
+MCC extraction or new game executable. Keep both existing packs available.
+If you already ran r16 Undo, leave its disabled PK4 in the reach folder.
+
+This restores the complete TACPAD material and all four textures byte for
+byte from the working r15 pack. Its previous diffuse/blue surfaces, normal,
+specular and emissive data are restored together. It also restores the AR,
+gloves and suit to their original bump/specular materials and resolutions.
+
+The accepted Steel paint is kept on the two main armor diffuse maps, returned
+to their original dimensions. The TACPAD itself uses its previous working
+appearance. The r16 PBR/roughness rewrite and 2x texture sets are disabled.
+
+Your currently installed r16 effects are copied unchanged into the new pack.
+The old r16 PK4 is disabled with a backup filename. Other packs stay in place.
+The two generated effect caches are backed up so the retained effects reload.
+
+The tool does not claim to solve the remaining flat-surface lighting issue.
+After checking the TACPAD in a map, hold the AR and run this console command:
+
+    exec reach_material_diagnostics.cfg
+
+This only prints active materials, loaded image information and bump/specular
+switch values, then writes Reach-images-r17.log and Reach-materials-r17.log
+under the usual RBDoom Saved Games reach folder. No graphics settings change.
+Those logs and a screenshot can establish what the running renderer uses.
+
+No model, animation, pose, gameplay script, inventory or engine changes.
+Details and source hashes: reach-material-restore17-report.json.
+
+To return fully to r15, remove only the new
+zzzzzzzzzzzzz_reach_material_restore_r17.pk4 from reach while Doom is closed;
+the r16 pack stays disabled. This also removes the retained Steel overlay.
+Restoring r15 effects after that requires refreshing the same two generated
+particle caches; keep the r16 Undo tool for that operation.

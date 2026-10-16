@@ -1,0 +1,85 @@
+name: Reach original-resolution material restore r17
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - 'tools/reach/assets/restore_materials.py'
+      - 'tools/reach/assets/test_material_restore.py'
+      - 'tools/reach/assets/Restore-Reach-materials.cmd'
+      - 'tools/reach/assets/MATERIAL-RESTORE-R17.txt'
+      - '.github/workflows/reach-material-restore.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test and package the installed-pack material restore
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory build -Force | Out-Null
+          function Check-Step([string]$label) {
+            if ($LASTEXITCODE -ne 0) {
+              Get-Content build/material-restore.log | Select-Object -Last 20 | ForEach-Object { Write-Host "::error title=${label}::$_" }
+              exit 1
+            }
+          }
+          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0 2>&1 | Tee-Object build/material-restore.log
+          Check-Step 'Dependencies'
+          python tools/reach/assets/test_material_restore.py 2>&1 | Tee-Object build/material-restore.log
+          Check-Step 'Installed-pack restoration tests'
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachMaterialRestore --paths tools/reach/assets --distpath build/reach-material-restore --workpath build/material-restore-work --specpath build tools/reach/assets/restore_materials.py 2>&1 | Tee-Object build/material-restore.log
+          Check-Step 'Windows restore tool packaging'
+          & build/reach-material-restore/ReachMaterialRestore.exe --help 2>&1 | Tee-Object build/material-restore.log
+          Check-Step 'Frozen Windows runtime'
+          Copy-Item tools/reach/assets/Restore-Reach-materials.cmd, tools/reach/assets/MATERIAL-RESTORE-R17.txt build/reach-material-restore/
+          New-Item -ItemType Directory build/reach-material-restore/licenses, build/reach-material-restore/source -Force | Out-Null
+          Copy-Item COPYING.txt build/reach-material-restore/licenses/Project-GPL.txt
+          Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-material-restore/licenses/Reclaimer.txt
+          Copy-Item tools/reach/assets/rmf_reader/UPSTREAM.md build/reach-material-restore/licenses/Reclaimer-source.md
+          Copy-Item tools/reach/assets/*.py, tools/reach/assets/requirements.txt build/reach-material-restore/source/
+          Copy-Item -Recurse tools/reach/assets/rmf_reader build/reach-material-restore/source/
+          python tools/reach/assets/copy_licenses.py build/reach-material-restore/licenses 2>&1 | Tee-Object build/material-restore.log
+          Check-Step 'Licenses'
+      - name: Execute the final extracted restore CMD on installed-pack fixtures
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/reach-material-restore/* -DestinationPath build/Reach-material-restore-r17.zip
+          $target = Join-Path $env:RUNNER_TEMP 'Reach Material Restore Test'
+          Expand-Archive build/Reach-material-restore-r17.zip $target
+          $env:REACH_RESTORE_FIXTURE = $target
+          @'
+          import os,sys
+          from pathlib import Path
+          sys.path.insert(0,'tools/reach/assets')
+          from test_material_restore import make_fixture
+          make_fixture(Path(os.environ['REACH_RESTORE_FIXTURE']))
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Installed-pack fixture failed.' }
+          & cmd.exe /d /c ('"' + (Join-Path $target 'Restore-Reach-materials.cmd') + '" <NUL')
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted restore CMD failed.' }
+          @'
+          import os,sys,zipfile
+          from pathlib import Path
+          sys.path.insert(0,'tools/reach/assets')
+          from test_material_restore import verify_output
+          from build_polish import PACK as POLISH_PACK,REPAIR
+          root=Path(os.environ['REACH_RESTORE_FIXTURE'])
+          with zipfile.ZipFile(root/'reach'/REPAIR) as z: original={n:z.read(n) for n in z.namelist()}
+          disabled=next((root/'reach').glob(POLISH_PACK+'.disabled-r17-*'))
+          with zipfile.ZipFile(disabled) as z: polish={n:z.read(n) for n in z.namelist()}
+          verify_output(root,original,polish)
+          print('PASS: extracted frozen CMD restores exact TACPAD pixels/material, retains native-size Steel paint and existing FX, disables r16, preserves unrelated files.')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted restore output validation failed.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reach-material-restore-r17
+          path: build/Reach-material-restore-r17.zip
+          if-no-files-found: error
