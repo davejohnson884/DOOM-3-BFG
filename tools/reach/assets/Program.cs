@@ -522,7 +522,8 @@ internal static class Program
             var oddWave = Path.Combine(root, "odd.wav"); WriteWave(oddWave, new byte[3], 8000, 1, 8, false);
             var odd = File.ReadAllBytes(oddWave);
             if (odd.Length != 48 || BitConverter.ToInt32(odd, 4) != 40 || BitConverter.ToInt32(odd, 40) != 3) throw new Exception("Odd PCM padding failed.");
-            Console.WriteLine("PASS: Reclaimer rig serialization, native PCM decoding, WAVE headers and asset path guards. No game assets were read.");
+            Console.WriteLine("Loaded dependency: " + typeof(TagTool.Audio.FMOD).Assembly.FullName);
+            Console.WriteLine("PASS: MCC palette layout/RGB validation, Reclaimer rig serialization, native PCM decoding, WAVE headers and asset path guards. No game assets were read.");
             return 0;
         } finally { Directory.Delete(root, true); }
     }

@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - uses: actions/checkout@v4
         with:
           repository: Gravemind2401/Reclaimer
@@ -61,16 +64,20 @@ jobs:
           name: reach-asset-tools
           path: build/reach-asset-tools/
           if-no-files-found: error
-      - name: Stage small palette add-on for existing collector
+      - name: Package and validate complete standalone palette collector
         shell: pwsh
         run: |
-          New-Item -ItemType Directory build/reach-palette-addon/schemas -Force | Out-Null
-          Copy-Item build/reach-asset-tools/ReachAssetExport.exe, build/reach-asset-tools/ReachAssetExport.dll, build/reach-asset-tools/ReachAssetExport.deps.json, build/reach-asset-tools/ReachAssetExport.runtimeconfig.json, tools/reach/assets/Collect-Reach-palette.cmd, tools/reach/assets/PALETTE.txt build/reach-palette-addon/
-          Copy-Item build/reach-asset-tools/schemas/matg.xml build/reach-palette-addon/schemas/
+          python tools/reach/assets/package_palette.py build/reach-asset-tools build/Reach-palette-tools.zip
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/reach/assets/verify_palette_package.py build/Reach-palette-tools.zip 2>&1 | Tee-Object build/reach-palette-package-test.log
+          if ($LASTEXITCODE -ne 0) {
+            Get-Content build/reach-palette-package-test.log | Select-Object -Last 15 | ForEach-Object { Write-Host "::error title=Standalone palette package::$_" }
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with:
-          name: reach-palette-addon
-          path: build/reach-palette-addon/
+          name: reach-palette-tools
+          path: build/Reach-palette-tools.zip
           if-no-files-found: error
       - name: Upload build log
         if: always()
@@ -80,3 +87,4 @@ jobs:
           path: |
             build/reach-assets-build.log
             build/reach-assets-runtime.log
+            build/reach-palette-package-test.log

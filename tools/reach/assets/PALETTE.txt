@@ -1,6 +1,11 @@
-This add-on belongs in your existing extracted reach-asset-tools folder,
-outside the game folders. Overwrite its ReachAssetExport files and merge
-the schemas folder. It uses the runtime already present in that folder.
+Extract the entire Reach-palette-tools.zip into a NEW empty folder outside
+both game installations. This is a complete Windows x64 collector with its
+matching libraries and runtime. No separate .NET install is required.
+
+Keep every file and subfolder together. Do not merge this package into an
+older collector folder or copy individual DLLs between tool versions.
+The earlier reach-palette-addon package was incomplete: TagTool uses a
+build-dependent assembly version, so an older copy may not load.
 
 Double-click Collect-Reach-palette.cmd. It reads MCC Reach forge_halo.map
 at the previously supplied D: install path. Attach the small generated
@@ -11,4 +16,4 @@ using the pinned ReachMCC globals schema rather than the Xbox 360 layout.
 No models, animations, textures, sounds or saved player profiles are copied.
 It does not install a BFG color update. The default Noble Six color indices
 and conversion into BFG's different material lighting still need review.
-It is independent of the r15 input/effects repair, which can be tested first.
+It is independent of the working r15 game mod. It changes no game files.
