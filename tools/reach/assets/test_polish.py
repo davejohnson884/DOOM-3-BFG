@@ -115,7 +115,7 @@ class PolishTests(unittest.TestCase):
 
     def test_only_named_particle_caches_moved_and_backed_up(self):
         with tempfile.TemporaryDirectory(prefix='Reach cache test ') as temp:
-            root = Path(temp); saved = root/'Saved Games'
+            root = Path(temp).resolve(); saved = root/'Saved Games'
             originals = {}
             for directory in [root/'reach/generated/particles', saved/'reach/generated/particles']:
                 directory.mkdir(parents=True)
