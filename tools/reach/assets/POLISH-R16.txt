@@ -1,0 +1,46 @@
+REACH AR POLISH r16 - for your working r15 installation
+
+Close the game. Extract this package beside ReachRBDoom3BFG.exe in your
+existing Doom BFG installation. Do not replace the game executable.
+
+Double-click Apply-Reach-polish.cmd. The first run asks for three existing
+files: your original reach-assets ZIP, reach-effects ZIP, and the small
+reach-palette ZIP. No further MCC extraction or .NET install is needed.
+Keep those ZIPs available; their locations are remembered locally.
+
+After conversion, use your usual Play-Reach-projection.cmd. Test the AR
+under moving lights, firing, and grenade explosions. V/G still use the r15
+controls; if needed, open the console and run exec reach_controls_r15.cfg.
+This asset update does not change gameplay scripts or fix startup bindings.
+
+The default is a 2x source-detail bake with authored RBDoom PBR materials.
+Apply-Reach-polish-classic.cmd keeps specular materials for comparison.
+Apply-Reach-polish-1x.cmd uses original map dimensions and PBR materials.
+Each choice replaces only our r16 overlay and retains a backup.
+
+Armor uses the owner's requested Steel/Steel colors: source palette entry0,
+the darkest neutral gray. The table itself has no color-name labels. The
+original blue TACPAD emission is retained separately from armor coloring.
+
+The frag fireball now uses its original separate billboard alpha texture.
+Flash sprites use their original alpha sampler and palettes. Cards have
+black gutters and terminal blank frames to avoid filtering/wrap artifacts.
+Flash scale, lifetime and brightness are authored for BFG and need playtest.
+
+Normal maps, donor detail tiling, specular masks and TACPAD emissive textures
+are evaluated at the chosen output resolution. 2x is a higher-resolution
+material bake, not AI super-resolution or newly recovered HD source art.
+Roughness/metalness are authored RBDoom approximations, not Reach parameters.
+No global shader files, graphics settings, model, animation or pose changes.
+
+The tool backs up only the two generated .bprt particle cache files for
+these effects, in the game folder and standard RBDoom Saved Games path.
+Stock particles, saves, settings and other caches are not touched. For a
+custom fs_savepath, pass --cache-root "your fs_savepath" to ReachPolish.exe.
+
+To return to r15: close the game and run Undo-Reach-polish.cmd. This disables
+only the r16 PK4 and refreshes the same two effect caches. Keep prior packs.
+Details and source hashes are recorded in reach-polish16-report.json.
+
+No Reach game data is distributed with these tools. Conversion stays local.
+Build/format checks do not establish in-game appearance or stability.

@@ -1,0 +1,86 @@
+name: Reach AR material and effect polish r16
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - 'tools/reach/assets/build_polish.py'
+      - 'tools/reach/assets/test_polish.py'
+      - 'tools/reach/assets/build_effects.py'
+      - 'tools/reach/assets/*Reach-polish*.cmd'
+      - 'tools/reach/assets/POLISH-R16.txt'
+      - '.github/workflows/reach-polish.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: RobertBeckebans/RBDOOM-3-BFG
+          ref: ba39ba67df049dcf16c7b31f6613f72959be2c21
+          path: polish-host
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            neo/framework/DeclParticle.cpp
+            neo/renderer/Material.cpp
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify and freeze the asset-only update
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory build -Force | Out-Null
+          function Check-Step([string]$label) {
+            if ($LASTEXITCODE -ne 0) {
+              Get-Content build/polish-step.log | Select-Object -Last 18 | ForEach-Object { Write-Host "::error title=${label}::$_" }
+              exit 1
+            }
+          }
+          python -m pip install -r tools/reach/assets/requirements.txt pyinstaller==6.16.0 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Dependencies'
+          python tools/reach/assets/test_appearance.py 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Existing appearance regression'
+          python tools/reach/assets/test_effects.py 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Existing effects regression'
+          python tools/reach/assets/test_polish.py --source polish-host 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Polish regression and pinned format checks'
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachPolish --paths tools/reach/assets --distpath build/reach-polish --workpath build/polish-work --specpath build tools/reach/assets/build_polish.py 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Polish tool packaging'
+          & build/reach-polish/ReachPolish.exe --help 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Frozen Windows runtime'
+          Copy-Item tools/reach/assets/*Reach-polish*.cmd, tools/reach/assets/POLISH-R16.txt build/reach-polish/
+          New-Item -ItemType Directory build/reach-polish/licenses, build/reach-polish/source -Force | Out-Null
+          Copy-Item COPYING.txt build/reach-polish/licenses/Project-GPL.txt
+          Copy-Item tools/reach/assets/rmf_reader/LICENSE build/reach-polish/licenses/Reclaimer.txt
+          Copy-Item tools/reach/assets/rmf_reader/UPSTREAM.md build/reach-polish/licenses/Reclaimer-source.md
+          Copy-Item tools/reach/assets/*.py, tools/reach/assets/requirements.txt build/reach-polish/source/
+          Copy-Item -Recurse tools/reach/assets/rmf_reader build/reach-polish/source/
+          python tools/reach/assets/copy_licenses.py build/reach-polish/licenses 2>&1 | Tee-Object build/polish-step.log
+          Check-Step 'Dependency licenses'
+      - name: Exercise undo in the final extracted package
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build/reach-polish/* -DestinationPath build/Reach-polish-r16.zip
+          $target = Join-Path $env:RUNNER_TEMP 'Reach Polish Extracted Test'
+          Expand-Archive build/Reach-polish-r16.zip $target
+          New-Item -ItemType Directory (Join-Path $target 'reach/generated/particles') -Force | Out-Null
+          Set-Content (Join-Path $target 'reach/zzzzzzzzzzzz_reach_polish_r16.pk4') 'fixture overlay'
+          Set-Content (Join-Path $target 'reach/generated/particles/reach_ar_flash_r15.bprt') 'fixture effect cache'
+          Set-Content (Join-Path $target 'reach/generated/particles/stock_smoke.bprt') 'stock cache'
+          & cmd.exe /d /c ('"' + (Join-Path $target 'Undo-Reach-polish.cmd') + '" <NUL')
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted frozen undo failed.' }
+          if (Test-Path (Join-Path $target 'reach/zzzzzzzzzzzz_reach_polish_r16.pk4')) { throw 'Overlay was not disabled.' }
+          if (Test-Path (Join-Path $target 'reach/generated/particles/reach_ar_flash_r15.bprt')) { throw 'Named cache was not refreshed.' }
+          if (-not (Test-Path (Join-Path $target 'reach/generated/particles/stock_smoke.bprt'))) { throw 'Unrelated cache changed.' }
+          & (Join-Path $target 'ReachPolish.exe') --help
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted frozen help failed.' }
+          Write-Host '::notice title=r16 asset package::PASS: source regression, pinned material/particle syntax, frozen extracted runtime and targeted cache undo. No game runtime test.'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reach-polish-tools-r16
+          path: build/Reach-polish-r16.zip
+          if-no-files-found: error

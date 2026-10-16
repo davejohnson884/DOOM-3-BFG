@@ -55,9 +55,29 @@ def bitmap(bundle, tag):
     return np.asarray(read_dds(path),dtype=float)/255
 
 
+def particle_alpha_source(particle):
+    """Resolve the actual shader branch and alpha sampler, not the noise alpha.
+
+    Reach particle albedo options 3 and 5 are respectively palettized plus
+    billboard alpha and palettized plus sprite alpha. The third sampler is
+    independent of the noise/palette samplers even when it repeats their tag.
+    """
+    options = particle['children']['Template Identifier']['elements']
+    option = struct.unpack('<h', base64.b64decode(options[0]['raw']))[0]
+    if option not in (3, 5):
+        raise ValueError('Unsupported source particle albedo option: '+str(option))
+    textures = particle['children']['Postprocess']['elements'][0]['children']['Textures']['elements']
+    tags = [f['tag'] for f in textures[2]['fields'] if f.get('kind')=='tagref' and f.get('tagClass')=='bitm']
+    if len(tags)!=1: raise ValueError('Missing source particle alpha sampler')
+    return option, tags[0]
+
+
 def bake_palette(bundle, particle_tag, bitmap_tag, palette_tag, size, palette_ages=(0.,)):
-    rects = sprite_rectangles(record(bundle,particle_tag,'prt3'))
+    particle = record(bundle,particle_tag,'prt3')
+    rects = sprite_rectangles(particle)
+    alpha_option, alpha_tag = particle_alpha_source(particle)
     source,palette = bitmap(bundle,bitmap_tag),bitmap(bundle,palette_tag)
+    alpha_source = bitmap(bundle,alpha_tag)
     width,height = size
     uu,vv = np.meshgrid((np.arange(width)+.5)/width,(np.arange(height)+.5)/height)
     tiles = []
@@ -69,10 +89,14 @@ def bake_palette(bundle, particle_tag, bitmap_tag, palette_tag, size, palette_ag
             ramp = palette[row]
             x = intensity*(len(ramp)-1);lo = np.floor(x).astype(int);hi = np.minimum(lo+1,len(ramp)-1)
             color = ramp[lo]*(1-(x-lo)[...,None])+ramp[hi]*(x-lo)[...,None]
-            # Additive RGB must be black outside the source sprite. Retain
-            # source alpha as coverage; do not invent a star-shaped flash.
-            color[...,:3] *= noise[...,3,None]
-            color[...,3] = noise[...,3]
+            if alpha_option == 3:
+                coverage = sample_wrap(alpha_source,uu,vv)[...,3]
+            else:
+                coverage = sample_wrap(alpha_source,u+uu*su,v+vv*sv)[...,3]
+            # Premultiply once for BFG's ONE/ONE additive stage. Palettized
+            # noise is a tiled field, not the billboard's coverage texture.
+            color[...,:3] *= coverage[...,None]
+            color[...,3] = coverage
             tiles.append(color)
     return np.concatenate(tiles,axis=1),len(tiles)
 
