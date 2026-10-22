@@ -35,12 +35,24 @@ def check(source):
         assert 'r_reachWeaponFov' not in controls and 'g_fov' not in controls
     files = set(subprocess.check_output(['git','diff','--name-only'],cwd=source,text=True).splitlines())
     assert files == {'neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-                     'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp'}, files
+                     'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp'}, files
+    # Removing the guarded insertion must reproduce every byte of the stock
+    # player implementation: all other weapons retain the supported host path.
+    original_player = subprocess.check_output(['git','show','HEAD:neo/d3xp/Player.cpp'],cwd=source,text=True)
+    patched_player = (source/'neo/d3xp/Player.cpp').read_text()
+    start = patched_player.index('\t// Reach opt-in weapon projection / authored first-person movement.')
+    end = patched_player.index('\tidVec3\tgunOfs = GunAcceleratingOffset();', start)
+    insertion = patched_player[start:end]
+    assert patched_player[:start] + patched_player[end:] == original_player
+    for guard in ['!common->IsMultiplayer()', 'reach_authored_motion', 'viewmodel_reach_ar', 'weapon_machinegun']:
+        assert guard in insertion
+    assert 'physicsObj.HasGroundContacts() ? 1 : -1' in insertion
     commands=(source/'neo/d3xp/gamesys/SysCmds.cpp').read_text()
     for name in ['reachMelee','reachGrenade']:
         assert re.search(r'AddCommand\( "'+name+r'", \w+, CMD_FL_GAME,',commands), 'Command must not require cheats'
     print('PASS: native/script events, event-name collision check, packaged V/G bindings, '
-          'unchanged r12 pose, non-cheat gameplay commands and seven-file source scope. Actual in-game playtest still required.')
+          'unchanged r12 pose, non-cheat gameplay commands and eight-file source scope and unchanged non-Reach player path. Actual in-game playtest still required.')
 
 
 if __name__ == '__main__': check(sys.argv[1])
+
