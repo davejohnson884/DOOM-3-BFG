@@ -126,7 +126,7 @@ def build(output, engine, capture, source, repair):
         for path in directory.iterdir():
             if path.is_file(): files['source/'+directory.name+'/'+path.name] = path.read_bytes()
     paths = ['neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-             'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp']
+             'neo/renderer/RenderBackend.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp']
     files['source/RBDoom-r15.patch'] = subprocess.check_output(['git','diff','--binary','--',*paths],cwd=source)
     report = {'revision':'r15', 'upstream':candidate.UPSTREAM,
               'toolCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=REPO,text=True).strip(),
@@ -145,3 +145,4 @@ if __name__ == '__main__':
     for name in ['engine','capture','source','repair']: parser.add_argument('--'+name,type=Path,required=True)
     args = parser.parse_args()
     build(args.output,args.engine,args.capture,args.source,args.repair)
+

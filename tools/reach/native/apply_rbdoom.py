@@ -21,7 +21,7 @@ def apply(root):
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
              'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp',
-             'neo/d3xp/gamesys/SysCmds.cpp']
+             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')
@@ -230,6 +230,26 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\tcmdSystem->AddCommand( "reachMelee", Cmd_ReachMelee_f, CMD_FL_GAME, "Reach AR melee" );\n'
         '\tcmdSystem->AddCommand( "reachGrenade", Cmd_ReachGrenade_f, CMD_FL_GAME, "Reach AR grenade throw" );\n',path)
 
+    path = paths[7]
+    changed[path] = replace(changed[path],
+        '\tidVec3\tgunOfs = GunAcceleratingOffset();\n',
+        '''\t// Reach opt-in weapon projection / authored first-person movement.
+\t// Only this explicitly opted-in SP rifle bypasses Doom's procedural
+\t// bob, turn lag, acceleration offset, landing dip and idle drift.
+\tconst idWeapon* reachMotionWeapon = weapon.GetEntity();
+\tif( !common->IsMultiplayer() && reachMotionWeapon != NULL &&
+\t\treachMotionWeapon->spawnArgs.GetBool( "reach_authored_motion" ) &&
+\t\tidStr::Cmp( reachMotionWeapon->spawnArgs.GetString( "model_view" ), "viewmodel_reach_ar" ) == 0 &&
+\t\tidStr::Cmp( reachMotionWeapon->spawnArgs.GetString( "weapon_scriptobject" ), "weapon_machinegun" ) == 0 )
+\t{
+\t\torigin = viewOrigin + gunpos * viewAxis;
+\t\tidAngles reachViewAngles( independentWeaponPitchAngle, 0.0f, 0.0f );
+\t\taxis = ( reachViewAngles.ToMat3() * g_gunScale.GetFloat() ) * viewAxis;
+\t\treturn;
+\t}
+\tidVec3\tgunOfs = GunAcceleratingOffset();
+''', path)
+
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
@@ -249,3 +269,4 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     apply(parser.parse_args().source)
+
