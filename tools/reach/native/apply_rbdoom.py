@@ -236,12 +236,14 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '''\t// Reach opt-in weapon projection / authored first-person movement.
 \t// Only this explicitly opted-in SP rifle bypasses Doom's procedural
 \t// bob, turn lag, acceleration offset, landing dip and idle drift.
-\tconst idWeapon* reachMotionWeapon = weapon.GetEntity();
+\tidWeapon* reachMotionWeapon = weapon.GetEntity();
 \tif( !common->IsMultiplayer() && reachMotionWeapon != NULL &&
 \t\treachMotionWeapon->spawnArgs.GetBool( "reach_authored_motion" ) &&
 \t\tidStr::Cmp( reachMotionWeapon->spawnArgs.GetString( "model_view" ), "viewmodel_reach_ar" ) == 0 &&
 \t\tidStr::Cmp( reachMotionWeapon->spawnArgs.GetString( "weapon_scriptobject" ), "weapon_machinegun" ) == 0 )
 \t{
+\t\t// Publish exact contact state to the existing script key interface.
+\t\treachMotionWeapon->spawnArgs.SetInt( "_reach_motion_grounded", physicsObj.HasGroundContacts() ? 1 : -1 );
 \t\torigin = viewOrigin + gunpos * viewAxis;
 \t\tidAngles reachViewAngles( independentWeaponPitchAngle, 0.0f, 0.0f );
 \t\taxis = ( reachViewAngles.ToMat3() * g_gunScale.GetFloat() ) * viewAxis;
