@@ -191,7 +191,32 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 			}
 			Event_StartWeaponParticle( "reach_barrel_smoke" );
             weaponParticles.Get( "reach_barrel_smoke", &smoke );
-            if( smoke != NULL ) { smoke->startTime = -1; }
+
+            // Emit on the shot's simulation tick. This avoids both the draw-only
+            // PresentWeapon path and mismatched slow/fast clock timestamps.
+            if( smoke != NULL )
+            {
+                smoke->active = false;
+                SetTimeState smokeClock( timeGroup );
+                idVec3 smokeOrigin;
+                idMat3 smokeAxis;
+                GetGlobalJointTransform( true, barrelJointView, smokeOrigin, smokeAxis );
+                smokeOrigin += idVec3( 2.0f, -0.6f, 0.0f ) * smokeAxis;
+                const renderView_t* view = owner->GetRenderView();
+                if( view != NULL )
+                {
+                    const float scale = ReachMuzzle::WorldSmokeScale( cvarSystem->GetCVarFloat( "r_reachWeaponFov" ), view->fov_y );
+                    const idVec3 delta = smokeOrigin - playerViewOrigin;
+                    smokeOrigin = playerViewOrigin + ( delta * playerViewAxis[0] ) * playerViewAxis[0] +
+                        scale * ( ( delta * playerViewAxis[1] ) * playerViewAxis[1] + ( delta * playerViewAxis[2] ) * playerViewAxis[2] );
+                }
+                if( gameLocal.isNewFrame )
+                {
+                    gameLocal.smokeParticles->EmitSmoke( smoke->particle, gameLocal.time,
+                        gameLocal.random.RandomFloat(), smokeOrigin, smokeAxis, timeGroup );
+                }
+            }
+
 
             if( weaponDef->dict.GetBool( "reach_layered_muzzle" ) )
             {
@@ -333,7 +358,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     # Reach opt-in weapon projection / diagnostic emission evidence (default off).
     path = paths[8]
     changed[path] = replace(changed[path], '\t\t\tnumActiveSmokes++;\n',
-        '\t\t\tnumActiveSmokes++;\n' + '            // Reach opt-in weapon projection / emission diagnostics, default off.\n            if( cvarSystem->GetCVarBool( "reach_fxDebug" ) && stage->material != NULL &&\n                idStr::Cmp( stage->material->GetName(), "reach/muzzle_smoke_soft" ) == 0 )\n            {\n                gameLocal.Printf( "REACH_FX smoke emitted time=%d active=%d\\n", gameLocal.time, numActiveSmokes );\n            }\n', path)
+        '\t\t\tnumActiveSmokes++;\n' + '            // Reach opt-in weapon projection / emission diagnostics, default off.\n            if( cvarSystem->GetCVarBool( "reach_fxDebug" ) && stage->material != NULL &&\n                idStr::Cmp( stage->material->GetName(), "reach/muzzle_smoke_soft" ) == 0 )\n            {\n                cvarSystem->SetCVarInteger( "reach_fxSmokeEmitted", cvarSystem->GetCVarInteger( "reach_fxSmokeEmitted" ) + 1 );\n            }\n', path)
 
     # Validate all changes before touching the source checkout.
     for path in paths:
