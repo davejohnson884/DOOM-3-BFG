@@ -83,3 +83,6 @@ Camera strength refinement: firing and reload gains default to 2.5, sprint and m
 
 
 Reload event refinement: replace the broad reload sway with separate removal, insertion, tactical seating tap and empty-only bolt-release/rebound beats. Timing follows the installed 30 Hz animation's magazine and operating-handle tracks: magazine departure frames14/13, reseating31/29 for tactical/empty; tactical seating tap near40; empty handle forward48–50. Curves use each clip's own58/67 frame intervals. Fire default gain is reduced2.5 to2.2 (12%); reload remains2.5, sprint/melee remain2.8, ready/lower/throw/walking unchanged. Test source contains no Reach asset bytes.
+
+
+Grenade throw camera refinement: retain source camera_control translation, add angular wind-up/release/follow-through keyed to the44frame/30Hz throw clip and unchanged267ms release. New non-archived reach_cameraThrowScale defaults1, range0–4. Accepted fire/reload/sprint/melee/ready profiles are unchanged. This native camera foundation currently opts in only the AR; other Reach weapons need explicit integration and per-weapon timing/profile data.

@@ -22,7 +22,7 @@ inline float Bell( float t, float peak )
     if( t <= 0 || t >= 1 ) { return 0; }
     return t < peak ? Smooth(t/peak) : 1-Smooth((t-peak)/(1-peak));
 }
-enum Profile { None, Reload, ReloadEmpty, Raise, Lower, SprintEnter, SprintLoop, SprintExit };
+enum Profile { None, Reload, ReloadEmpty, Raise, Lower, SprintEnter, SprintLoop, SprintExit, Throw };
 inline float EventPulse( float seconds, float start, float peak, float end )
 {
     if( seconds<=start || seconds>=end ) {return 0;}
@@ -65,6 +65,19 @@ inline Motion ProfileMotion( Profile profile, float t )
         return m; // vertical stride comes from the original camera_control track
     }
     if( t <= 0 || t >= 1 ) { return m; }
+    if( profile==Throw )
+    {
+        // 44 frames at30Hz. Existing projectile release is267ms; let the
+        // unchanged35ms camera response carry the release into follow-through.
+        const float seconds=t*(43.0f/30);
+        const float windup=EventPulse(seconds,.02f,.14f,.25f);
+        const float release=EventPulse(seconds,.18f,.255f,.48f);
+        const float recover=EventPulse(seconds,.38f,.54f,.88f);
+        m.a[0]= .38f*windup-1.20f*release+.30f*recover;
+        m.a[1]=-.18f*windup+.22f*release-.05f*recover;
+        m.a[2]=-.32f*windup+.72f*release-.18f*recover;
+        return m; // original camera_control translation is retained by caller
+    }
     if( profile==Reload || profile==ReloadEmpty )
     {
         return ReloadMotion(profile==ReloadEmpty,t);

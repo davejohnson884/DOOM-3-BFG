@@ -8,6 +8,8 @@ static idCVar reach_cameraSprintScale("reach_cameraSprintScale","2.8",CVAR_GAME|
     "Reach AR sprint camera strength relative to the original camera pass",0.0f,4.0f);
 static idCVar reach_cameraMeleeScale("reach_cameraMeleeScale","2.8",CVAR_GAME|CVAR_FLOAT,
     "Reach AR melee camera strength relative to the original camera pass",0.0f,4.0f);
+static idCVar reach_cameraThrowScale("reach_cameraThrowScale","1",CVAR_GAME|CVAR_FLOAT,
+    "Reach AR grenade throw camera strength",0.0f,4.0f);
 
 bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
 {
@@ -30,6 +32,7 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     ReachCamera::Profile profile=ReachCamera::None;
     if( strstr(name,"reload_empty")!=NULL ) {profile=ReachCamera::ReloadEmpty;}
     else if( strstr(name,"reload")!=NULL ) {profile=ReachCamera::Reload;}
+    else if( strstr(name,"throw_grenade")!=NULL ) {profile=ReachCamera::Throw;}
     else if( strstr(name,"sprint_enter")!=NULL ) {profile=ReachCamera::SprintEnter;}
     else if( strstr(name,"sprint_exit")!=NULL ) {profile=ReachCamera::SprintExit;}
     else if( sprintLoop ) {profile=ReachCamera::SprintLoop;}
@@ -37,9 +40,10 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     else if( strstr(name,"putaway")!=NULL || strstr(name,"put_away")!=NULL ) {profile=ReachCamera::Lower;}
     float gain=1;
     if( melee ) {gain=reach_cameraMeleeScale.GetFloat();}
+    else if( profile==ReachCamera::Throw ) {gain=reach_cameraThrowScale.GetFloat();}
     else if( profile==ReachCamera::Reload || profile==ReachCamera::ReloadEmpty ) {gain=reach_cameraReloadScale.GetFloat();}
     else if( profile==ReachCamera::SprintEnter || profile==ReachCamera::SprintLoop || profile==ReachCamera::SprintExit ) {gain=reach_cameraSprintScale.GetFloat();}
-    // Raise/ready, lower/putaway and grenade throw retain their accepted gains.
+    // All accepted gains remain unchanged; only the throw gets its new profile.
     ReachCamera::Motion target=ReachCamera::ScaleMotion(ReachCamera::ProfileMotion(profile,phase),gain);
     if( authored )
     {

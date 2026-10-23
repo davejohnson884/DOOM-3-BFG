@@ -6,7 +6,7 @@
 int main()
 {
     using namespace ReachCamera;
-    for( int p=Reload;p<=SprintExit;++p )
+    for( int p=Reload;p<=Throw;++p )
     {
         if( p==SprintLoop ) {continue;}
         for( float t : {0.0f,1.0f} )
@@ -80,6 +80,19 @@ int main()
             Motion reloadNeutral;Motion settled=reloadState.Evaluate(int(duration*1000)+1000,reloadNeutral);
             for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
         }
+    }
+    for(int step:{16,33}) {
+        State throwState;float windupPeak=0,releasePeak=0,recoveryPeak=0;
+        for(int ms=0;ms<1500;ms+=step) {
+            const float seconds=float(ms)*.001f;
+            Motion throwing=throwState.Evaluate(ms,ProfileMotion(Throw,seconds/(43.0f/30)));
+            if(seconds<.22f && throwing.a[0]>windupPeak) {windupPeak=throwing.a[0];}
+            if(seconds>.22f && seconds<.43f && -throwing.a[0]>releasePeak) {releasePeak=-throwing.a[0];}
+            if(seconds>.48f && seconds<.9f && throwing.a[0]>recoveryPeak) {recoveryPeak=throwing.a[0];}
+        }
+        assert(windupPeak>.2f && releasePeak>.85f && recoveryPeak>.2f);
+        Motion throwNeutral;Motion throwSettled=throwState.Evaluate(2200,throwNeutral);
+        for(int i=0;i<3;++i) {assert(throwSettled.a[i]==0 && throwSettled.p[i]==0);}
     }
     std::puts("PASS camera recovery, duplicate-query safety, rate independence, shot settling and bounds");
 }
