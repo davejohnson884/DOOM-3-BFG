@@ -21,6 +21,7 @@
                                 rendEnt->axis[2] = direction.Cross( side );
                                 const float age = ( gameLocal.time - part->startTime ) / 110.0f;
                                 // Source centerOffset.y=-.45 anchors a growing jet at its root.
-                                rendEnt->origin += direction * ( .9f * 3.9f * 1.35f * ReachMuzzle::BrakeScale( age ) );
+                                const float radius = weaponDef->dict.GetFloat( "reach_muzzle_jet_radius", "3.9" );
+                                rendEnt->origin += direction * ( .9f * radius * 1.35f * ReachMuzzle::BrakeScale( age ) );
                             }
                         }
