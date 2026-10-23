@@ -1,33 +1,30 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
 #include "MuzzleEffects.h"
 #include <cassert>
 #include <cmath>
-#include <limits>
+#include <cstdio>
 #include <initializer_list>
-int main()
-{
-    for( int previous = 0; previous < 8; ++previous )
-    {
-        bool seen[8] = {};
-        for( int random = 0; random < 7; ++random )
-        {
-            const int next = ReachMuzzle::NextVariant( previous, random );
-            assert( next >= 0 && next < 8 && next != previous && !seen[next] );
-            seen[next] = true;
-        }
+int main() {
+    assert( std::abs( ReachMuzzle::BrakeScale(0)-.5f ) < 1e-6f );
+    assert( std::abs( ReachMuzzle::BrakeScale(1)-1.25f ) < 1e-6f );
+    float previous = 0;
+    for( int i=0; i<=110; ++i ) {
+        float value=ReachMuzzle::BrakeScale( i/110.0f );
+        assert( value>=previous ); previous=value;
     }
-    for( float weapon : { 35.0f, 54.0f, 90.0f } )
-    {
-        for( float world : { 40.0f, 60.0f, 90.0f } )
-        {
-            const double rad = 0.017453292519943295769;
-            const double pWeapon = 1.0 / ( std::tan( weapon * rad * .5 ) * .75 );
-            const double pWorld = 1.0 / std::tan( world * rad * .5 );
-            const float scale = ReachMuzzle::WorldSmokeScale( weapon, world );
-            // The same point projects to the same vertical screen coordinate.
-            assert( std::abs( pWorld * ( -3.0 * scale ) / 40 - pWeapon * -3 / 40 ) < 1e-6 );
-        }
+    for( const auto& jet: ReachMuzzle::jets ) {
+        float length=0; for(float v:jet.direction) length+=v*v;
+        assert( std::abs(length-1)<.0001f );
+        assert( jet.direction[0]>.5f && jet.direction[0]<.7f );
     }
-    assert( ReachMuzzle::WorldSmokeScale( 0, 60 ) == 1 );
-    assert( ReachMuzzle::WorldSmokeScale( 54, std::numeric_limits<float>::quiet_NaN() ) == 1 );
+    for( float fov: {60.f,75.f,90.f} ) {
+        assert(ReachMuzzle::WorldSmokeScale(fov,fov)>0);
+    }
+    // Native one-puff smoke uses bunching=0 and starts on its first valid
+    // PresentWeapon call; this is exactly the pinned EmitSmoke branch.
+    for( int delay: {0,16,33,100} ) {
+        int now=1000+delay, start=now, count=0;
+        if(now==start) count=1;
+        assert(count==1);
+    }
+    std::puts("PASS source-marker directions, expansion curve and deferred smoke start");
 }

@@ -21,7 +21,7 @@ def apply(root):
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
              'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp',
-             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp']
+             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp', 'neo/d3xp/SmokeParticles.cpp']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')
@@ -170,7 +170,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 		if( ( weaponDef != NULL && weaponDef->dict.GetBool( "reach_native_muzzle_fx" ) ) && fpFlashParticle->emitter != NULL )
 		{
 			renderEntity_t* flash = fpFlashParticle->emitter->GetRenderEntity();
-			flash->shaderParms[5] = float( ReachMuzzle::NextVariant( int( flash->shaderParms[5] ), gameLocal.random.RandomInt( 7 ) ) );
+			flash->shaderParms[5] = float( gameLocal.random.RandomInt( 8 ) );
 			fpFlashParticle->emitter->UpdateVisuals();
 		}
 		Event_StartWeaponParticle( "reach_fp_flash" );
@@ -190,6 +190,49 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 				weaponParticles.Set( restoredSmoke.name, restoredSmoke );
 			}
 			Event_StartWeaponParticle( "reach_barrel_smoke" );
+            weaponParticles.Get( "reach_barrel_smoke", &smoke );
+            if( smoke != NULL ) { smoke->startTime = -1; }
+
+            if( weaponDef->dict.GetBool( "reach_layered_muzzle" ) )
+            {
+                for( int jet = 0; jet < 5; ++jet )
+                {
+                    const idStr name = va( "reach_fp_brake_%d", jet );
+                    WeaponParticle_t* brake = NULL;
+                    if( !weaponParticles.Get( name.c_str(), &brake ) || brake == NULL )
+                    {
+                        const idDeclEntityDef* def = gameLocal.FindEntityDef( "func_emitter", false );
+                        if( def == NULL ) { continue; }
+                        idDict args = def->dict;
+                        args.Set( "model", "reach_ar_brake_native.prt" );
+                        args.SetBool( "start_off", true );
+                        args.SetBool( "cycleTrigger", true );
+                        idEntity* ent = NULL;
+                        if( !gameLocal.SpawnEntityDef( args, &ent, false ) || ent == NULL ) { continue; }
+                        WeaponParticle_t entry;
+                        memset( &entry, 0, sizeof( entry ) );
+                        strcpy( entry.name, name.c_str() );
+                        strcpy( entry.particlename, "reach_ar_brake_native.prt" );
+                        entry.joint = barrelJointView;
+                        entry.emitter = static_cast<idFuncEmitter*>( ent );
+                        renderEntity_t* re = entry.emitter->GetRenderEntity();
+                        re->allowSurfaceInViewID = owner->entityNumber + 1;
+                        re->weaponDepthHack = true;
+                        re->noShadow = re->noOverlays = true;
+                        re->shaderParms[6] = 1.0f;
+                        entry.emitter->BecomeActive( TH_THINK );
+                        weaponParticles.Set( name.c_str(), entry );
+                        weaponParticles.Get( name.c_str(), &brake );
+                    }
+                    if( brake != NULL && brake->emitter != NULL )
+                    {
+                        // Pick a source sprite/mirror at birth, not a new star shape each frame.
+                        brake->emitter->GetRenderEntity()->shaderParms[5] = float( gameLocal.random.RandomInt( 8 ) );
+                        Event_StartWeaponParticle( name.c_str() );
+                    }
+                }
+            }
+
 		}
 	}
 ''', path)
@@ -224,6 +267,12 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\t\t// Camera axis 1 is LEFT. Eject out to the right, slightly upward.\n'
         '\t\tlinear_velocity = -playerViewAxis[1] * 100.0f + playerViewAxis[2] * 12.0f +\n'
         '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
+    # Reach opt-in weapon projection / original five directional brake jets.
+    changed[path] = replace(changed[path],
+        '\t\t\t\t\t\tGetGlobalJointTransform( true, part->joint, rendEnt->origin, rendEnt->axis );\n',
+        '\t\t\t\t\t\tGetGlobalJointTransform( true, part->joint, rendEnt->origin, rendEnt->axis );\n' +
+        (ROOT/'ReachMuzzlePresent.cpp').read_text(), path)
+
     # Reach opt-in weapon projection / world-space barrel smoke.
     changed[path] = replace(changed[path],
         '\t\t\t\t\tif( !gameLocal.smokeParticles->EmitSmoke( part->particle, part->startTime, gameLocal.random.RandomFloat(), muzzleOrigin, muzzleAxis, timeGroup /*_D3XP*/ ) )\n',
@@ -280,6 +329,11 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 \t}
 \tidVec3\tgunOfs = GunAcceleratingOffset();
 ''', path)
+
+    # Reach opt-in weapon projection / diagnostic emission evidence (default off).
+    path = paths[8]
+    changed[path] = replace(changed[path], '\t\t\tnumActiveSmokes++;\n',
+        '\t\t\tnumActiveSmokes++;\n' + '            // Reach opt-in weapon projection / emission diagnostics, default off.\n            if( cvarSystem->GetCVarBool( "reach_fxDebug" ) && stage->material != NULL &&\n                idStr::Cmp( stage->material->GetName(), "reach/muzzle_smoke_soft" ) == 0 )\n            {\n                gameLocal.Printf( "REACH_FX smoke emitted time=%d active=%d\\n", gameLocal.time, numActiveSmokes );\n            }\n', path)
 
     # Validate all changes before touching the source checkout.
     for path in paths:
