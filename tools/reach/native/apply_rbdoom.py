@@ -167,15 +167,28 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 	WeaponParticle_t* fpFlashParticle = NULL;
 	if( weaponParticles.Get( "reach_fp_flash", &fpFlashParticle ) && fpFlashParticle != NULL )
 	{
-		if( spawnArgs.GetBool( "reach_native_muzzle_fx" ) && fpFlashParticle->emitter != NULL )
+		if( ( weaponDef != NULL && weaponDef->dict.GetBool( "reach_native_muzzle_fx" ) ) && fpFlashParticle->emitter != NULL )
 		{
 			renderEntity_t* flash = fpFlashParticle->emitter->GetRenderEntity();
 			flash->shaderParms[5] = float( ReachMuzzle::NextVariant( int( flash->shaderParms[5] ), gameLocal.random.RandomInt( 7 ) ) );
 			fpFlashParticle->emitter->UpdateVisuals();
 		}
 		Event_StartWeaponParticle( "reach_fp_flash" );
-		if( spawnArgs.GetBool( "reach_native_muzzle_fx" ) )
+		if( ( weaponDef != NULL && weaponDef->dict.GetBool( "reach_native_muzzle_fx" ) ) )
 		{
+			WeaponParticle_t* smoke = NULL;
+			if( !weaponParticles.Get( "reach_barrel_smoke", &smoke ) || smoke == NULL )
+			{
+				// Existing saves may predate the smoke registration in the def.
+				WeaponParticle_t restoredSmoke;
+				memset( &restoredSmoke, 0, sizeof( restoredSmoke ) );
+				strcpy( restoredSmoke.name, "reach_barrel_smoke" );
+				strcpy( restoredSmoke.particlename, "reach_barrel_smoke_native.prt" );
+				restoredSmoke.joint = barrelJointView;
+				restoredSmoke.smoke = true;
+				restoredSmoke.particle = static_cast<const idDeclParticle*>( declManager->FindType( DECL_PARTICLE, restoredSmoke.particlename, false ) );
+				weaponParticles.Set( restoredSmoke.name, restoredSmoke );
+			}
 			Event_StartWeaponParticle( "reach_barrel_smoke" );
 		}
 	}

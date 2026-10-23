@@ -1,6 +1,6 @@
 					// Reach opt-in weapon projection: seed shared, world-space smoke
 					// at the apparent FP muzzle, then leave already emitted puffs free.
-					if( !common->IsMultiplayer() && spawnArgs.GetBool( "reach_native_muzzle_fx" ) &&
+					if( !common->IsMultiplayer() && weaponDef != NULL && weaponDef->dict.GetBool( "reach_native_muzzle_fx" ) &&
 						idStr::Cmp( part->name, "reach_barrel_smoke" ) == 0 &&
 						idStr::Cmp( spawnArgs.GetString( "model_view" ), "viewmodel_reach_ar" ) == 0 &&
 						idStr::Cmp( spawnArgs.GetString( "weapon_scriptobject" ), "weapon_machinegun" ) == 0 )
