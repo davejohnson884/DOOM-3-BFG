@@ -120,7 +120,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 
     path = paths[3]
     changed[path] = replace(changed[path], '#include "Game_local.h"',
-                            '#include "Game_local.h"\n#include "ReachQuickActions.h"\n#include "ReachMuzzleEffects.h"', path)
+                            '#include "Game_local.h"\n#include "ReachQuickActions.h"\n#include "ReachMuzzleEffects.h"\n'
+                            'static bool ReachCombatWeapon( const idDict& args );', path)
     changed[path] = replace(changed[path],
         '\t\tconst idKeyValue* lkv = weaponDef->dict.MatchPrefix( "weapon_light", NULL );\n',
         '''		// Reach opt-in weapon projection: the candidate script tags its
