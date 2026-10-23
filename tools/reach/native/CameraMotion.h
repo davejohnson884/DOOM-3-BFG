@@ -23,6 +23,37 @@ inline float Bell( float t, float peak )
     return t < peak ? Smooth(t/peak) : 1-Smooth((t-peak)/(1-peak));
 }
 enum Profile { None, Reload, ReloadEmpty, Raise, Lower, SprintEnter, SprintLoop, SprintExit };
+inline float EventPulse( float seconds, float start, float peak, float end )
+{
+    if( seconds<=start || seconds>=end ) {return 0;}
+    return seconds<peak ? Smooth((seconds-start)/(peak-start)) :
+        1-Smooth((seconds-peak)/(end-peak));
+}
+inline Motion ReloadMotion( bool empty, float phase )
+{
+    Motion m;
+    if( phase<=0 || phase>=1 ) {return m;}
+    // Installed 30 Hz source clips: 59/68 frames, 58/67 frame intervals.
+    // Magazine local tracks leave the receiver at frames 14/13 and reseat at
+    // 31/29. Tactical reload adds the final seating tap near frame 40;
+    // only empty reload moves b_ophandle forward at frames 48-50.
+    const float seconds=phase*(empty ? 67.0f/30 : 58.0f/30);
+    const float hold=Bell(phase,.36f);
+    const float out=EventPulse(seconds,empty ? .36f : .40f,empty ? .46f : .49f,.72f);
+    const float in=EventPulse(seconds,empty ? .87f : .93f,empty ? .96f : 1.03f,1.23f);
+    const float seat=empty ? 0 : EventPulse(seconds,1.25f,1.32f,1.47f);
+    const float bolt=empty ? EventPulse(seconds,1.52f,1.61f,1.81f) : 0;
+    const float boltSettle=empty ? EventPulse(seconds,1.69f,1.80f,1.98f) : 0;
+    // Low carrying motion between events; removal pulls down/left, seating
+    // kicks up/right, bolt release gives a separate compact kick and rebound.
+    m.p[0]=-.035f*hold-.070f*out+.075f*in+.020f*seat-.060f*bolt;
+    m.p[1]= .025f*hold+.040f*out-.035f*in;
+    m.p[2]=-.020f*hold-.040f*out+.045f*in+.015f*seat;
+    m.a[0]= .140f*hold+.550f*out-.780f*in-.220f*seat-.520f*bolt+.160f*boltSettle;
+    m.a[1]= .045f*hold+.130f*out-.100f*in+.070f*bolt;
+    m.a[2]=-.160f*hold-.420f*out+.560f*in+.140f*seat+.300f*bolt-.100f*boltSettle;
+    return m;
+}
 inline Motion ProfileMotion( Profile profile, float t )
 {
     Motion m;
@@ -36,19 +67,7 @@ inline Motion ProfileMotion( Profile profile, float t )
     if( t <= 0 || t >= 1 ) { return m; }
     if( profile==Reload || profile==ReloadEmpty )
     {
-        const float settle=Bell(t,.40f);
-        const float insert=Bell(Limit((t-.48f)/.28f,0,1),.42f);
-        m.p[0]=-.12f*settle+.035f*insert;
-        m.p[1]=.09f*settle-.04f*insert;
-        m.p[2]=-.06f*settle;
-        m.a[0]=.72f*settle-.38f*insert;
-        m.a[1]=.16f*settle-.12f*insert;
-        m.a[2]=-.68f*settle+.34f*insert;
-        if( profile==ReloadEmpty )
-        {
-            const float bolt=Bell(Limit((t-.73f)/.23f,0,1),.32f);
-            m.a[0]-=.28f*bolt; m.a[2]+=.18f*bolt;
-        }
+        return ReloadMotion(profile==ReloadEmpty,t);
     }
     else if( profile==Raise )
     {

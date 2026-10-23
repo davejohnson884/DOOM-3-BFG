@@ -1,6 +1,6 @@
 // Reach opt-in weapon projection / animation camera. No asset or save changes.
 // Non-archived presentation controls: tuning does not rewrite user settings.
-static idCVar reach_cameraFireScale("reach_cameraFireScale","2.5",CVAR_GAME|CVAR_FLOAT,
+static idCVar reach_cameraFireScale("reach_cameraFireScale","2.2",CVAR_GAME|CVAR_FLOAT,
     "Reach AR firing camera strength relative to the original camera pass",0.0f,4.0f);
 static idCVar reach_cameraReloadScale("reach_cameraReloadScale","2.5",CVAR_GAME|CVAR_FLOAT,
     "Reach AR reload camera strength relative to the original camera pass",0.0f,4.0f);

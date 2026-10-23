@@ -54,5 +54,32 @@ int main()
         Motion ready=ProfileMotion(Raise,t),same=ScaleMotion(ready,1);
         for(int i=0;i<3;++i) {assert(ready.p[i]==same.p[i] && ready.a[i]==same.a[i]);}
     }
+    // Distinct source-timed removal, insertion and empty-only bolt impulses.
+    assert(EventPulse(.40f,.40f,.49f,.72f)==0);
+    assert(EventPulse(.49f,.40f,.49f,.72f)==1);
+    assert(EventPulse(.72f,.40f,.49f,.72f)==0);
+    for(bool empty:{false,true}) {
+        const float duration=empty ? 67.0f/30 : 58.0f/30;
+        Motion removal=ReloadMotion(empty,(empty ? .49f : .52f)/duration);
+        Motion seating=ReloadMotion(empty,(empty ? .99f : 1.06f)/duration);
+        assert(removal.a[0]>.5f && removal.a[2]<-.4f);
+        assert(seating.a[0]<-.5f && seating.a[2]>.3f);
+        // Evaluate through the real filter: separate peaks must survive at
+        // both 60 and 30 Hz, including a neutral interval between mag events.
+        for(int step:{16,33}) {
+            State reloadState;float removalPeak=0,insertionPeak=0,boltPeak=0;
+            for(int ms=0;ms<int(duration*1000);ms+=step) {
+                const float seconds=float(ms)*.001f;
+                Motion motion=reloadState.Evaluate(ms,ScaleMotion(ReloadMotion(empty,seconds/duration),2.5f));
+                if(seconds>.4f && seconds<.75f && motion.a[0]>removalPeak) {removalPeak=motion.a[0];}
+                if(seconds>.9f && seconds<1.25f && -motion.a[0]>insertionPeak) {insertionPeak=-motion.a[0];}
+                if(seconds>1.53f && seconds<1.84f && -motion.a[0]>boltPeak) {boltPeak=-motion.a[0];}
+            }
+            assert(removalPeak>1.25f && insertionPeak>1.25f);
+            if(empty) {assert(boltPeak>.8f);} else {assert(boltPeak<.1f);}
+            Motion neutral;Motion settled=reloadState.Evaluate(int(duration*1000)+1000,neutral);
+            for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
+        }
+    }
     std::puts("PASS camera recovery, duplicate-query safety, rate independence, shot settling and bounds");
 }

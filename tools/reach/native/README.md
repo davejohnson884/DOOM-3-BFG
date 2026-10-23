@@ -80,3 +80,6 @@ CameraMotion.h is independent of engine types. test_camera.cpp checks finite sho
 
 
 Camera strength refinement: firing and reload gains default to 2.5, sprint and melee to 2.8 relative to the first camera pass. Ready/raise, lower, grenade throw and existing walking camera retain their prior behavior. The non-archived runtime controls `reach_cameraFireScale`, `reach_cameraReloadScale`, `reach_cameraSprintScale`, `reach_cameraMeleeScale` accept 0–4. The stronger melee retains source timing and direction; the output angle safety bound is now 6 degrees, with the existing two-unit position bound. No new scripts, assets, serialization or input view-angle changes.
+
+
+Reload event refinement: replace the broad reload sway with separate removal, insertion, tactical seating tap and empty-only bolt-release/rebound beats. Timing follows the installed 30 Hz animation's magazine and operating-handle tracks: magazine departure frames14/13, reseating31/29 for tactical/empty; tactical seating tap near40; empty handle forward48–50. Curves use each clip's own58/67 frame intervals. Fire default gain is reduced2.5 to2.2 (12%); reload remains2.5, sprint/melee remain2.8, ready/lower/throw/walking unchanged. Test source contains no Reach asset bytes.
