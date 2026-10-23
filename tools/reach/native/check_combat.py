@@ -40,6 +40,13 @@ def check(source):
     # player implementation: all other weapons retain the supported host path.
     original_player = subprocess.check_output(['git','show','HEAD:neo/d3xp/Player.cpp'],cwd=source,text=True)
     patched_player = (source/'neo/d3xp/Player.cpp').read_text()
+    camera_start=patched_player.index('        // Reach opt-in weapon projection / animation camera.')
+    camera_end=patched_player.index('        // Reach animation camera end.\n',camera_start)+len('        // Reach animation camera end.\n')
+    camera_insertion=patched_player[camera_start:camera_end]
+    assert 'ReachCameraMotion' in camera_insertion and 'viewAngles =' not in camera_insertion
+    for guard in ['!common->IsMultiplayer()', '!spectating', '!gameLocal.inCinematic', 'privateCameraView==NULL', 'gameLocal.GetCamera()==NULL', '!pm_thirdPerson.GetBool()']:
+        assert guard in camera_insertion
+    patched_player=patched_player[:camera_start]+patched_player[camera_end:]
     start = patched_player.index('\t// Reach opt-in weapon projection / authored first-person movement.')
     end = patched_player.index('\tidVec3\tgunOfs = GunAcceleratingOffset();', start)
     insertion = patched_player[start:end]
@@ -55,4 +62,5 @@ def check(source):
 
 
 if __name__ == '__main__': check(sys.argv[1])
+
 

@@ -277,7 +277,14 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         'EVENT( EV_ReachQuickAction, idWeapon::Event_ReachQuickAction )\nEVENT( EV_Weapon_UseAmmo,', path)
     changed[path] = replace(changed[path],
         'void idWeapon::Event_EjectBrass()\n',
-        (ROOT/'ReachCombat.cpp').read_text() + '\nvoid idWeapon::Event_EjectBrass()\n', path)
+        (ROOT/'ReachCombat.cpp').read_text() + '\n' + (ROOT/'ReachCamera.cpp').read_text() +
+        '\nvoid idWeapon::Event_EjectBrass()\n', path)
+    changed[path] = replace(changed[path], 'void idWeapon::Clear()\n{\n',
+        'void idWeapon::Clear()\n{\n\t// Reach opt-in weapon projection / transient camera state.\n\treachCamera.Reset();\n',path)
+    changed[path] = replace(changed[path], '\tweaponSmokeStartTime = gameLocal.realClientTime;\n',
+        '\tweaponSmokeStartTime = gameLocal.realClientTime;\n'
+        '\tif( ReachCombatWeapon(spawnArgs) && spawnArgs.GetBool("reach_authored_motion") )\n'
+        '\t{\n\t\tSetTimeState cameraShotClock(timeGroup);\n\t\treachCamera.Shot(gameLocal.time);\n\t}\n',path)
     changed[path] = replace(changed[path],
         '\tidDebris* debris = static_cast<idDebris*>( ent );\n\tdebris->Create( owner, origin, axis );',
         '\tidDebris* debris = static_cast<idDebris*>( ent );\n'
@@ -305,8 +312,12 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\t\t\t\t\tif( !gameLocal.smokeParticles->EmitSmoke( part->particle, part->startTime, gameLocal.random.RandomFloat(), muzzleOrigin, muzzleAxis, timeGroup /*_D3XP*/ ) )\n', path)
 
     path = paths[4]
+    changed[path] = replace(changed[path], 'class idWeapon : public idAnimatedEntity\n',
+        '#include "ReachCameraMotion.h"\n\nclass idWeapon : public idAnimatedEntity\n',path)
     changed[path] = replace(changed[path], 'public:\n',
-        'public:\n\t// Reach opt-in weapon projection / queued SP action API.\n\tbool ReachQueueAction( int action );\n', path)
+        'public:\n\t// Reach opt-in weapon projection / queued SP action API.\n\tbool ReachQueueAction( int action );\n'
+        '\tbool ReachCameraMotion( idVec3& offset, idAngles& angles );\n'
+        'private:\n\tReachCamera::State reachCamera; // transient; resets on Clear/restore construction\npublic:\n', path)
     changed[path] = replace(changed[path],
         '\tvoid\t\t\t\t\tEvent_EjectBrass();',
         '\t// Reach opt-in weapon projection / single-player grenade inventory events.\n'
@@ -334,6 +345,26 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\tcmdSystem->AddCommand( "reachGrenade", Cmd_ReachGrenade_f, CMD_FL_GAME, "Reach AR grenade throw" );\n',path)
 
     path = paths[7]
+    changed[path] = replace(changed[path],
+        '\t\torigin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();\n',
+        '''\t\torigin += axis[0] * g_viewNodalX.GetFloat() + axis[2] * g_viewNodalZ.GetFloat();
+        // Reach opt-in weapon projection / animation camera.
+        // The camera and FP weapon share this view frame. Input viewAngles are
+        // never modified, so action/recoil recovery cannot accumulate aim drift.
+        idWeapon* reachCameraWeapon=weapon.GetEntity();
+        if( !common->IsMultiplayer() && !spectating && !gameLocal.inCinematic &&
+            privateCameraView==NULL && gameLocal.GetCamera()==NULL &&
+            !pm_thirdPerson.GetBool() && !pm_thirdPersonDeath.GetBool() && reachCameraWeapon!=NULL )
+        {
+            idVec3 cameraOffset;idAngles cameraAngles;
+            if( reachCameraWeapon->ReachCameraMotion(cameraOffset,cameraAngles) )
+            {
+                origin+=cameraOffset*axis;
+                axis=cameraAngles.ToMat3()*axis;
+            }
+        }
+        // Reach animation camera end.
+''',path)
     changed[path] = replace(changed[path],
         '\tidVec3\tgunOfs = GunAcceleratingOffset();\n',
         '''\t// Reach opt-in weapon projection / authored first-person movement.
@@ -372,6 +403,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     helper.write_bytes((ROOT/'WeaponProjection.h').read_bytes())
     (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
     (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())
+    (root/'neo/d3xp/ReachCameraMotion.h').write_bytes((ROOT/'CameraMotion.h').read_bytes())
     print('Applied projection extension to pinned RBDoom '+UPSTREAM)
     print('Default off; restricted to tagged owner FP rifle/flash; public entity/save/demo formats unchanged.')
 
@@ -380,4 +412,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     apply(parser.parse_args().source)
+
 

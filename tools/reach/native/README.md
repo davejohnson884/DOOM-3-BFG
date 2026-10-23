@@ -68,3 +68,12 @@ already be installed. See `PLAYER-README.txt` for installing/removing it.
 Full engine compilation and these checks do not execute the game or establish
 graphics correctness, stability or original Reach parity. V input diagnosis
 and G grenade integration are separate unfinished work.
+
+
+## Reach animation camera
+
+The opted-in single-player Reach AR now evaluates the existing camera_control joint in parent-local space for melee, grenade throws and the sprint loop. This cancels the accepted viewmodel root placement. Reload, empty reload, ready/raise, lower and sprint transitions use bounded camera-specific curves keyed to the native animation clock. Firing adds a short impulse for each actual projectile launch, with finite recovery and a small deterministic alternating side component.
+
+GetViewPos applies the transient local transform to the same frame used by the camera and first-person weapon. It never writes input viewAngles. The camera tracks action blends, clears on weapon Clear, and resets on clock rewind; repeated view queries at one simulation time cannot integrate twice. Camera offsets are limited to two host units and 3.5 degrees per axis. Multiplayer, spectator, cinematic, private-camera and third-person paths retain the original view calculation. Existing walking/landing camera behavior is retained; the old Doom weapon sway remains bypassed for the tagged rifle.
+
+CameraMotion.h is independent of engine types. test_camera.cpp checks finite shot recovery, action endpoints, duplicate-query safety, frame-rate-independent settling, interruption recovery, clock reset and bounds. check_combat.py strips both guarded player insertions and verifies the remaining player source is byte-identical to the pinned release. reach_cameraDebug is an optional non-archived diagnostic switch; off by default. No private Reach assets or renderer/performance/thread/display changes are needed for this extension. The transient camera state is deliberately not added to the save format and initializes cleanly when a weapon is constructed/restored.
