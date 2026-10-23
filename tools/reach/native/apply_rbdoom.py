@@ -120,7 +120,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 
     path = paths[3]
     changed[path] = replace(changed[path], '#include "Game_local.h"',
-                            '#include "Game_local.h"\n#include "ReachQuickActions.h"', path)
+                            '#include "Game_local.h"\n#include "ReachQuickActions.h"\n#include "ReachMuzzleEffects.h"', path)
     changed[path] = replace(changed[path],
         '\t\tconst idKeyValue* lkv = weaponDef->dict.MatchPrefix( "weapon_light", NULL );\n',
         '''		// Reach opt-in weapon projection: the candidate script tags its
@@ -167,7 +167,17 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
 	WeaponParticle_t* fpFlashParticle = NULL;
 	if( weaponParticles.Get( "reach_fp_flash", &fpFlashParticle ) && fpFlashParticle != NULL )
 	{
+		if( spawnArgs.GetBool( "reach_native_muzzle_fx" ) && fpFlashParticle->emitter != NULL )
+		{
+			renderEntity_t* flash = fpFlashParticle->emitter->GetRenderEntity();
+			flash->shaderParms[5] = float( ReachMuzzle::NextVariant( int( flash->shaderParms[5] ), gameLocal.random.RandomInt( 7 ) ) );
+			fpFlashParticle->emitter->UpdateVisuals();
+		}
 		Event_StartWeaponParticle( "reach_fp_flash" );
+		if( spawnArgs.GetBool( "reach_native_muzzle_fx" ) )
+		{
+			Event_StartWeaponParticle( "reach_barrel_smoke" );
+		}
 	}
 ''', path)
 
@@ -201,6 +211,12 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\t\t// Camera axis 1 is LEFT. Eject out to the right, slightly upward.\n'
         '\t\tlinear_velocity = -playerViewAxis[1] * 100.0f + playerViewAxis[2] * 12.0f +\n'
         '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
+    # Reach opt-in weapon projection / world-space barrel smoke.
+    changed[path] = replace(changed[path],
+        '\t\t\t\t\tif( !gameLocal.smokeParticles->EmitSmoke( part->particle, part->startTime, gameLocal.random.RandomFloat(), muzzleOrigin, muzzleAxis, timeGroup /*_D3XP*/ ) )\n',
+        (ROOT/'ReachMuzzleSmoke.cpp').read_text() +
+        '\t\t\t\t\tif( !gameLocal.smokeParticles->EmitSmoke( part->particle, part->startTime, gameLocal.random.RandomFloat(), muzzleOrigin, muzzleAxis, timeGroup /*_D3XP*/ ) )\n', path)
+
     path = paths[4]
     changed[path] = replace(changed[path], 'public:\n',
         'public:\n\t// Reach opt-in weapon projection / queued SP action API.\n\tbool ReachQueueAction( int action );\n', path)
@@ -263,6 +279,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         (root/path).write_text(changed[path], encoding='utf-8', newline='\n')
     helper.write_bytes((ROOT/'WeaponProjection.h').read_bytes())
     (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
+    (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())
     print('Applied projection extension to pinned RBDoom '+UPSTREAM)
     print('Default off; restricted to tagged owner FP rifle/flash; public entity/save/demo formats unchanged.')
 
