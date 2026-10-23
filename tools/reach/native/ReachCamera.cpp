@@ -1,4 +1,14 @@
 // Reach opt-in weapon projection / animation camera. No asset or save changes.
+// Non-archived presentation controls: tuning does not rewrite user settings.
+static idCVar reach_cameraFireScale("reach_cameraFireScale","2.5",CVAR_GAME|CVAR_FLOAT,
+    "Reach AR firing camera strength relative to the original camera pass",0.0f,4.0f);
+static idCVar reach_cameraReloadScale("reach_cameraReloadScale","2.5",CVAR_GAME|CVAR_FLOAT,
+    "Reach AR reload camera strength relative to the original camera pass",0.0f,4.0f);
+static idCVar reach_cameraSprintScale("reach_cameraSprintScale","2.8",CVAR_GAME|CVAR_FLOAT,
+    "Reach AR sprint camera strength relative to the original camera pass",0.0f,4.0f);
+static idCVar reach_cameraMeleeScale("reach_cameraMeleeScale","2.8",CVAR_GAME|CVAR_FLOAT,
+    "Reach AR melee camera strength relative to the original camera pass",0.0f,4.0f);
+
 bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
 {
     offset.Zero();angles.Zero();
@@ -15,7 +25,8 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     const float phase=blend!=NULL && blend->Length()>0 ?
         ReachCamera::Limit(float(blend->AnimTime(now))/float(blend->Length()),0,1) : 0;
     const bool sprintLoop=strstr(name,"sprint_loop")!=NULL && strstr(name,"airborne")==NULL;
-    const bool authored=sprintLoop || strstr(name,"melee")!=NULL || strstr(name,"throw_grenade")!=NULL;
+    const bool melee=strstr(name,"melee")!=NULL;
+    const bool authored=sprintLoop || melee || strstr(name,"throw_grenade")!=NULL;
     ReachCamera::Profile profile=ReachCamera::None;
     if( strstr(name,"reload_empty")!=NULL ) {profile=ReachCamera::ReloadEmpty;}
     else if( strstr(name,"reload")!=NULL ) {profile=ReachCamera::Reload;}
@@ -24,7 +35,12 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     else if( sprintLoop ) {profile=ReachCamera::SprintLoop;}
     else if( strstr(name,"raise")!=NULL || strstr(name,"ready")!=NULL ) {profile=ReachCamera::Raise;}
     else if( strstr(name,"putaway")!=NULL || strstr(name,"put_away")!=NULL ) {profile=ReachCamera::Lower;}
-    ReachCamera::Motion target=ReachCamera::ProfileMotion(profile,phase);
+    float gain=1;
+    if( melee ) {gain=reach_cameraMeleeScale.GetFloat();}
+    else if( profile==ReachCamera::Reload || profile==ReachCamera::ReloadEmpty ) {gain=reach_cameraReloadScale.GetFloat();}
+    else if( profile==ReachCamera::SprintEnter || profile==ReachCamera::SprintLoop || profile==ReachCamera::SprintExit ) {gain=reach_cameraSprintScale.GetFloat();}
+    // Raise/ready, lower/putaway and grenade throw retain their accepted gains.
+    ReachCamera::Motion target=ReachCamera::ScaleMotion(ReachCamera::ProfileMotion(profile,phase),gain);
     if( authored )
     {
         idVec3 cameraOrigin;idMat3 cameraAxis;
@@ -36,12 +52,12 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
             const idAngles cameraAngles=cameraAxis.ToAngles();
             for( int i=0;i<3;++i )
             {
-                target.p[i]+=cameraOrigin[i]*.55f;
-                target.a[i]+=idMath::AngleNormalize180(cameraAngles[i])*.65f;
+                target.p[i]+=cameraOrigin[i]*.55f*gain;
+                target.a[i]+=idMath::AngleNormalize180(cameraAngles[i])*.65f*gain;
             }
         }
     }
-    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target);
+    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,reach_cameraFireScale.GetFloat());
     for( int i=0;i<3;++i ) {offset[i]=motion.p[i];angles[i]=motion.a[i];}
     if( cvarSystem->GetCVarBool("reach_cameraDebug") && reachCamera.debugTime!=now )
     {
@@ -51,4 +67,3 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     }
     return true;
 }
-

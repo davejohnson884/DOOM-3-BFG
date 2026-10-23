@@ -10,6 +10,11 @@ struct Motion
     float p[3] = {0,0,0};
     float a[3] = {0,0,0}; // pitch, yaw, roll in degrees
 };
+inline Motion ScaleMotion( Motion motion, float gain )
+{
+    for( int i=0;i<3;++i ) {motion.p[i]*=gain;motion.a[i]*=gain;}
+    return motion;
+}
 inline float Limit( float x, float lo, float hi ) { return x < lo ? lo : (x > hi ? hi : x); }
 inline float Smooth( float x ) { x=Limit(x,0,1); return x*x*(3-2*x); }
 inline float Bell( float t, float peak )
@@ -89,7 +94,7 @@ struct State
         lastShot=now;shotTime[nextShot]=now;shotSide[nextShot]=(sequence++&1) ? -1 : 1;
         nextShot=(nextShot+1)%4;
     }
-    Motion Evaluate( int now, const Motion& target )
+    Motion Evaluate( int now, const Motion& target, float shotScale=1 )
     {
         if( lastTime>=0 && now<lastTime ) { Reset(); }
         if( lastTime<0 || now<lastTime || now-lastTime>250 )
@@ -111,7 +116,7 @@ struct State
         Motion result=filtered;
         for( int i=0;i<4;++i )
         {
-            const float pulse=ShotPulse(now-shotTime[i]);
+            const float pulse=ShotPulse(now-shotTime[i])*Limit(shotScale,0,4);
             result.a[0]-=.66f*pulse;
             result.a[1]+=.075f*float(shotSide[i])*pulse;
             result.a[2]+=.12f*float(shotSide[i])*pulse;
@@ -119,11 +124,10 @@ struct State
             result.p[2]+=.025f*pulse;
         }
         float length=0;
-        for( int i=0;i<3;++i ) { length+=result.p[i]*result.p[i];result.a[i]=Limit(result.a[i],-3.5f,3.5f); }
+        for( int i=0;i<3;++i ) { length+=result.p[i]*result.p[i];result.a[i]=Limit(result.a[i],-6.0f,6.0f); }
         if( length>4 ) { const float scale=2/std::sqrt(length);for(float& v:result.p) {v*=scale;} }
         return result;
     }
 };
 }
 #endif
-

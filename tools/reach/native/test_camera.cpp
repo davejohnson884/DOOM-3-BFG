@@ -36,7 +36,23 @@ int main()
     a=burst.Evaluate(50,target);assert(burst.sequence==0 && a.a[0]==0);
     target.p[0]=target.p[1]=target.p[2]=100;target.a[0]=100;
     for(int t=60;t<200;t+=10) {a=burst.Evaluate(t,target);}
-    assert(a.a[0]<=3.5f);assert(a.p[0]*a.p[0]+a.p[1]*a.p[1]+a.p[2]*a.p[2]<4.00001f);
+    assert(a.a[0]<=6.0f);assert(a.p[0]*a.p[0]+a.p[1]*a.p[1]+a.p[2]*a.p[2]<4.00001f);
+    // Stronger shot pulse is proportional, finite and still has no residual.
+    State original, stronger;Motion neutral;
+    original.Evaluate(1000,neutral);stronger.Evaluate(1000,neutral);
+    original.Shot(1000);stronger.Shot(1000);
+    Motion baseShot=original.Evaluate(1018,neutral);
+    Motion strongShot=stronger.Evaluate(1018,neutral,2.5f);
+    assert(std::fabs(strongShot.a[0]-2.5f*baseShot.a[0])<.00001f);
+    for(int t=1100;t<=2000;t+=100) {stronger.Shot(t);a=stronger.Evaluate(t+18,neutral,2.5f);assert(std::fabs(a.a[0])<3.75f);}
+    a=stronger.Evaluate(2400,neutral,2.5f);
+    for(int i=0;i<3;++i) {assert(a.p[i]==0 && a.a[i]==0);}
+    // Action scaling affects every axis; accepted ready profile stays exact.
+    Motion reload=ProfileMotion(Reload,.4f), scaled=ScaleMotion(reload,2.5f);
+    for(int i=0;i<3;++i) {assert(scaled.p[i]==reload.p[i]*2.5f && scaled.a[i]==reload.a[i]*2.5f);}
+    for(float t:{0.0f,.25f,.5f,.75f,1.0f}) {
+        Motion ready=ProfileMotion(Raise,t),same=ScaleMotion(ready,1);
+        for(int i=0;i<3;++i) {assert(ready.p[i]==same.p[i] && ready.a[i]==same.a[i]);}
+    }
     std::puts("PASS camera recovery, duplicate-query safety, rate independence, shot settling and bounds");
 }
-
