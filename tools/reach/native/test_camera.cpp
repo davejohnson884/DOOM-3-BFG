@@ -77,7 +77,7 @@ int main()
             }
             assert(removalPeak>1.25f && insertionPeak>1.25f);
             if(empty) {assert(boltPeak>.8f);} else {assert(boltPeak<.1f);}
-            Motion neutral;Motion settled=reloadState.Evaluate(int(duration*1000)+1000,neutral);
+            Motion reloadNeutral;Motion settled=reloadState.Evaluate(int(duration*1000)+1000,reloadNeutral);
             for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
         }
     }
