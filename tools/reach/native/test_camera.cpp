@@ -94,5 +94,16 @@ int main()
         Motion throwNeutral;Motion throwSettled=throwState.Evaluate(2200,throwNeutral);
         for(int i=0;i<3;++i) {assert(throwSettled.a[i]==0 && throwSettled.p[i]==0);}
     }
+    assert(CompassTurns(0)==0 && CompassTurns(360)==0);
+    assert(CompassTurns(90)==.25f && CompassTurns(-90)==.75f);
+    assert(CompassTurns(720)==0);
+    State walkA,walkB;Motion gaitA,gaitB;
+    for(int t=0;t<=1000;t+=10) {gaitA=walkA.Walk(t,140,true);}
+    for(int t=0;t<=1000;t+=20) {gaitB=walkB.Walk(t,140,true);}
+    for(int i=0;i<3;++i) {assert(std::fabs(gaitA.a[i]-gaitB.a[i])<.0001f);}
+    Motion repeated=walkA.Walk(1000,140,true);
+    for(int i=0;i<3;++i) {assert(repeated.a[i]==gaitA.a[i]);}
+    Motion stopped=walkA.Walk(1010,0,false);
+    for(int i=0;i<3;++i) {assert(stopped.a[i]==0 && stopped.p[i]==0);}
     std::puts("PASS camera recovery, duplicate-query safety, rate independence, shot settling and bounds");
 }

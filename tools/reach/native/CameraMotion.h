@@ -108,17 +108,45 @@ inline float ShotPulse( int age )
     if( age <= 0 || age >= 165 ) { return 0; }
     return age < 18 ? Smooth(float(age)/18.0f) : 1-Smooth(float(age-18)/147.0f);
 }
+inline float CompassTurns( float yaw )
+{
+    if( !std::isfinite(yaw) ) {return 0;}
+    return (yaw-std::floor(yaw/360.0f)*360.0f)/360.0f;
+}
+inline Motion WalkingMotion( float phase, float strength )
+{
+    Motion m;const float p=6.28318530718f*phase;
+    strength=Limit(strength,0,1.25f);
+    m.a[0]=.18f*std::sin(p*2)*strength;
+    m.a[1]=.055f*std::sin(p)*strength;
+    m.a[2]=.24f*std::sin(p)*strength;
+    m.p[2]=.075f*std::sin(p*2)*strength;
+    return m;
+}
 struct State
 {
     Motion filtered;
+    int walkTime=-1;
+    float walkPhase=0;
     int lastTime=-1;
     int shotTime[4]={-100000,-100000,-100000,-100000};
     int shotSide[4]={1,-1,1,-1};
     int nextShot=0, sequence=0, lastShot=-1, debugTime=-1;
     void Reset()
     {
+        walkTime=-1;walkPhase=0;
         filtered=Motion();lastTime=-1;nextShot=sequence=0;lastShot=debugTime=-1;
         for( int i=0;i<4;++i ) { shotTime[i]=-100000;shotSide[i]=1; }
+    }
+    Motion Walk( int now, float speed, bool active )
+    {
+        if( walkTime<0 || now<walkTime || now-walkTime>250 ) {walkTime=now;}
+        const float elapsed=float(now-walkTime)*.001f;walkTime=now;
+        if( !std::isfinite(speed) || speed<0 ) {speed=0;}
+        if( !active ) {return Motion();}
+        walkPhase+=elapsed*Limit(speed,0,320)/140.0f;
+        walkPhase-=std::floor(walkPhase);
+        return WalkingMotion(walkPhase,Limit(speed/140.0f,0,1.25f));
     }
     void Shot( int now )
     {

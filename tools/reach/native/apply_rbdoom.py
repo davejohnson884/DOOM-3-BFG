@@ -292,14 +292,20 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
         '\t\t// Blam ejection-marker rotation is not the stock casing model basis.\n'
         '\t\taxis[0] = -playerViewAxis[1];\n\t\taxis[1] = playerViewAxis[0];\n\t\taxis[2] = playerViewAxis[2];\n\t}\n'
+        + (ROOT/'ReachCasingOrigin.cpp').read_text() +
         '\tdebris->Create( owner, origin, axis );', path)
     changed[path] = replace(changed[path],
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );',
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );\n'
         '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
         '\t\t// Camera axis 1 is LEFT. Eject out to the right, slightly upward.\n'
-        '\t\tlinear_velocity = -playerViewAxis[1] * 100.0f + playerViewAxis[2] * 12.0f +\n'
+        '\t\tlinear_velocity = playerViewAxis[0]*(10.0f+5.0f*gameLocal.random.CRandomFloat()) - playerViewAxis[1]*(32.0f+8.0f*gameLocal.random.CRandomFloat()) + playerViewAxis[2]*(68.0f+10.0f*gameLocal.random.CRandomFloat()) +\n'
         '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
+    changed[path] = replace(changed[path],
+        '\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );\n',
+        '\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );\n' +
+        (ROOT/'ReachCasingDebug.cpp').read_text(),path)
+
     # Reach opt-in weapon projection / original five directional brake jets.
     changed[path] = replace(changed[path],
         '\t\t\t\t\t\tGetGlobalJointTransform( true, part->joint, rendEnt->origin, rendEnt->axis );\n',
@@ -413,5 +419,4 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     apply(parser.parse_args().source)
-
 

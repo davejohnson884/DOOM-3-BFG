@@ -11,6 +11,9 @@ static idCVar reach_cameraMeleeScale("reach_cameraMeleeScale","2.8",CVAR_GAME|CV
 static idCVar reach_cameraThrowScale("reach_cameraThrowScale","1",CVAR_GAME|CVAR_FLOAT,
     "Reach AR grenade throw camera strength",0.0f,4.0f);
 
+static idCVar reach_cameraWalkScale("reach_cameraWalkScale","1",CVAR_GAME|CVAR_FLOAT,
+    "Reach AR walking camera strength",0.0f,4.0f);
+
 bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
 {
     offset.Zero();angles.Zero();
@@ -20,6 +23,9 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     {
         reachCamera.Reset();return false;
     }
+    // Compass consumes its own unused shader parameter, separate from ammo.
+    renderEntity.shaderParms[11]=ReachCamera::CompassTurns(owner->viewAngles.yaw-
+        spawnArgs.GetFloat("reach_compass_north","0"));
     SetTimeState cameraClock(timeGroup);
     const int now=gameLocal.time;
     const idAnimBlend* blend=animator.CurrentAnim(ANIMCHANNEL_ALL);
@@ -61,6 +67,15 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
             }
         }
     }
+    const bool locomotion=profile==ReachCamera::None && !melee &&
+        (strstr(name,"source_moving")!=NULL || strstr(name,"idle")!=NULL || strstr(name,"fire")!=NULL);
+    const idVec3 relativeVelocity=owner->GetPhysics()->GetLinearVelocity()-owner->GetPhysics()->GetPushedLinearVelocity();
+    const idVec3 gravityDirection=owner->GetPhysics()->GetGravityNormal();
+    const float walkingSpeed=(relativeVelocity-gravityDirection*(relativeVelocity*gravityDirection)).Length();
+    const bool walking=locomotion && owner->GetPhysics()->HasGroundContacts() &&
+        (owner->usercmd.forwardmove!=0 || owner->usercmd.rightmove!=0) && walkingSpeed>5;
+    const ReachCamera::Motion stride=ReachCamera::ScaleMotion(reachCamera.Walk(now,walkingSpeed,walking),reach_cameraWalkScale.GetFloat());
+    for(int i=0;i<3;++i) {target.p[i]+=stride.p[i];target.a[i]+=stride.a[i];}
     const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,reach_cameraFireScale.GetFloat());
     for( int i=0;i<3;++i ) {offset[i]=motion.p[i];angles[i]=motion.a[i];}
     if( cvarSystem->GetCVarBool("reach_cameraDebug") && reachCamera.debugTime!=now )
