@@ -291,18 +291,29 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\tidDebris* debris = static_cast<idDebris*>( ent );\n'
         '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
         '\t\t// Blam ejection-marker rotation is not the stock casing model basis.\n'
-        '\t\taxis[0] = -playerViewAxis[1];\n\t\taxis[1] = playerViewAxis[0];\n\t\taxis[2] = playerViewAxis[2];\n\t}\n'
+        '\t\taxis[0] = -playerViewAxis[1];\n\t\taxis[1] = playerViewAxis[0];\n\t\taxis[2] = playerViewAxis[2];\n'
+        '\t\t// Source particle starts quarter-turned; vary the initial lean slightly.\n'
+        '\t\taxis = idAngles(-90.0f+15.0f*gameLocal.random.CRandomFloat(),0,8.0f*gameLocal.random.CRandomFloat()).ToMat3()*axis;\n\t}\n'
         + (ROOT/'ReachCasingOrigin.cpp').read_text() +
         '\tdebris->Create( owner, origin, axis );', path)
     changed[path] = replace(changed[path],
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );',
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );\n'
         '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
-        '\t\t// Reach casing emitter speed 2.5--3 Halo units/s, along its original marker.\n'
-        '\t\tlinear_velocity = reachEjectDirection*(300.0f+60.0f*gameLocal.random.RandomFloat()) +\n'
+        '\t\t// Retarget the original marker into the lower, outward reference arc.\n'
+        '\t\t// Preserve source launch speed; vary direction independently for each case.\n'
+        '\t\tidVec3 direction = playerViewAxis[0]*((reachEjectDirection*playerViewAxis[0])+0.035f*gameLocal.random.CRandomFloat()) -\n'
+        '\t\t\tplayerViewAxis[1]*(-(reachEjectDirection*playerViewAxis[1])*1.15f+0.06f*gameLocal.random.CRandomFloat()) +\n'
+        '\t\t\tplayerViewAxis[2]*((reachEjectDirection*playerViewAxis[2])*0.35f+0.035f*gameLocal.random.CRandomFloat());\n'
+        '\t\tdirection.Normalize();\n'
+        '\t\tlinear_velocity = direction*(300.0f+60.0f*gameLocal.random.RandomFloat()) +\n'
         '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
     changed[path] = replace(changed[path],
         '\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );\n',
+        '\tif( ReachCombatWeapon(spawnArgs) )\n\t{\n'
+        '\t\t// Source initial rotation rate spans -5..5 turns/s. Favor visible end-over-end tumble.\n'
+        '\t\tangular_velocity = playerViewAxis[0]*(31.4159265f*gameLocal.random.CRandomFloat()) +\n'
+        '\t\t\tplayerViewAxis[1]*(4.0f*gameLocal.random.CRandomFloat()) + playerViewAxis[2]*(4.0f*gameLocal.random.CRandomFloat());\n\t}\n'
         '\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );\n' +
         (ROOT/'ReachCasingDebug.cpp').read_text(),path)
 
