@@ -298,13 +298,17 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );',
         '\tlinear_velocity = 40 * ( playerViewAxis[0] + playerViewAxis[1] + playerViewAxis[2] );\n'
         '\tif( ReachCombatWeapon( spawnArgs ) )\n\t{\n'
-        '\t\t// Camera axis 1 is LEFT. Eject out to the right, slightly upward.\n'
-        '\t\tlinear_velocity = playerViewAxis[0]*(10.0f+5.0f*gameLocal.random.CRandomFloat()) - playerViewAxis[1]*(32.0f+8.0f*gameLocal.random.CRandomFloat()) + playerViewAxis[2]*(68.0f+10.0f*gameLocal.random.CRandomFloat()) +\n'
+        '\t\t// Reach casing emitter speed 2.5--3 Halo units/s, along its original marker.\n'
+        '\t\tlinear_velocity = reachEjectDirection*(300.0f+60.0f*gameLocal.random.RandomFloat()) +\n'
         '\t\t\towner->GetPhysics()->GetLinearVelocity();\n\t}', path)
     changed[path] = replace(changed[path],
         '\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );\n',
         '\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );\n' +
         (ROOT/'ReachCasingDebug.cpp').read_text(),path)
+
+    changed[path] = replace(changed[path],
+        '\tgameLocal.SpawnEntityDef( brassDict, &ent, false );',
+        '\tconst idVec3 reachEjectDirection = axis[0];\n\tgameLocal.SpawnEntityDef( brassDict, &ent, false );', path)
 
     # Reach opt-in weapon projection / original five directional brake jets.
     changed[path] = replace(changed[path],
@@ -419,4 +423,5 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     apply(parser.parse_args().source)
+
 
