@@ -2,6 +2,7 @@
 // Reproduce the actual Doom Str.h restriction around the standalone helper.
 #define strcmp DOOM_REQUIRES_IDSTR_CMP
 #include "WeaponProjection.h"
+#include "WeaponActions.h"
 #undef strcmp
 #include <array>
 #include <cstdio>
@@ -121,6 +122,13 @@ void CheckScope()
 
 int main()
 {
+    bool consumed=false;
+    Require(ReachActions::Press(consumed,true),"first semi-auto press rejected");
+    for(int frame=0;frame<120;++frame) {Require(!ReachActions::Press(consumed,true),"held trigger repeated");}
+    Require(!ReachActions::Press(consumed,false),"release fired");
+    Require(ReachActions::Press(consumed,true),"second semi-auto press rejected");
+    Require(ReachProjection::Eligible("models/md5/weapons/reach_magnum/view.md5mesh",true,true,1,1,false,false),"Magnum projection rejected");
+    Require(!ReachProjection::Eligible("models/md5/weapons/reach_magnum/view.md5mesh",false,true,1,1,false,false),"untagged Magnum modified");
 	CheckCamera( 4.0f / 3.0f, 54.0 );
 	CheckCamera( 16.0f / 9.0f, 68.38180955042496 );
 	CheckCamera( 3440.0f / 1440.0f, 84.78589368943273 );
@@ -129,3 +137,4 @@ int main()
 	std::puts( "Weapon projection: reference rays, aspect, jitter, depth, signs, invalid inputs and first-person scope passed." );
 	return 0;
 }
+

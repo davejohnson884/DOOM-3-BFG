@@ -413,6 +413,9 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed[path] = replace(changed[path], '\t\t\tnumActiveSmokes++;\n',
         '\t\t\tnumActiveSmokes++;\n' + '            // Reach opt-in weapon projection / emission diagnostics, default off.\n            if( cvarSystem->GetCVarBool( "reach_fxDebug" ) && stage->material != NULL &&\n                idStr::Cmp( stage->material->GetName(), "reach/muzzle_smoke_soft" ) == 0 )\n            {\n                cvarSystem->SetCVarInteger( "reach_fxSmokeEmitted", cvarSystem->GetCVarInteger( "reach_fxSmokeEmitted" ) + 1 );\n            }\n', path)
 
+    # Data-driven Magnum shares existing controller without changing script/save bytecode.
+    from magnum_support import extend
+    changed = extend(changed, replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
@@ -426,6 +429,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
     (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())
     (root/'neo/d3xp/ReachCameraMotion.h').write_bytes((ROOT/'CameraMotion.h').read_bytes())
+    (root/'neo/d3xp/ReachWeaponActions.h').write_bytes((ROOT/'WeaponActions.h').read_bytes())
     print('Applied projection extension to pinned RBDoom '+UPSTREAM)
     print('Default off; restricted to tagged owner FP rifle/flash; public entity/save/demo formats unchanged.')
 
@@ -434,5 +438,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source', type=Path)
     apply(parser.parse_args().source)
+
 
 

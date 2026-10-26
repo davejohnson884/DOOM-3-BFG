@@ -28,6 +28,8 @@ inline bool Eligible( const char* model, bool tagged, bool depthHack,
 	}
 	return ModelNamed( model, "models/md5/weapons/reach_ar/view.md5mesh" ) ||
 		ModelNamed( model, "models/md5/weapons/reach_ar/view_appearance_r15.md5mesh" ) ||
+        ModelNamed( model, "models/md5/weapons/reach_magnum/view.md5mesh" ) ||
+        ModelNamed( model, "reach_magnum_flash.prt" ) ||
 		ModelNamed( model, "reach_ar_flash.prt" ) || ModelNamed( model, "reach_ar_flash_r15.prt" ) ||
         ModelNamed( model, "reach_ar_brake_native.prt" );
 }
@@ -67,4 +69,5 @@ inline bool Apply( float* projection, float horizontalFov4By3, float aspect )
 } // namespace ReachProjection
 
 #endif
+
 
