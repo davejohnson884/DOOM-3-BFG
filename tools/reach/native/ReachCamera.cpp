@@ -54,6 +54,25 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     else if( profile==ReachCamera::SprintEnter || profile==ReachCamera::SprintLoop || profile==ReachCamera::SprintExit ) {gain=reach_cameraSprintScale.GetFloat();}
     // All accepted gains remain unchanged; only the throw gets its new profile.
     ReachCamera::Motion target=ReachCamera::ScaleMotion(ReachCamera::ProfileMotion(profile,phase),gain);
+    if(shotgunAction)
+    {
+        // Beats follow the source pump extrema and shell insertion frame,
+        // rather than the AR's magazine removal/seating/bolt profile.
+        const float seconds=blend!=NULL ? float(blend->AnimTime(now))*.001f : 0;
+        const bool chamber=strstr(name,"reload_chamber")!=NULL;
+        const bool shell=strstr(name,"reload_shell")!=NULL;
+        const bool fire=strstr(name,"fire")!=NULL;
+        const float pull=(fire || chamber) ? ReachCamera::EventPulse(seconds,
+            chamber ? .27f : .48f,chamber ? .40f : .63f,chamber ? .59f : .79f) : 0;
+        const float close=(fire || chamber) ? ReachCamera::EventPulse(seconds,
+            chamber ? .57f : .75f,chamber ? .67f : .87f,chamber ? .83f : 1.03f) : 0;
+        const float seat=shell ? ReachCamera::EventPulse(seconds,.32f,.4333f,.50f) : 0;
+        const float lift=(!fire && !chamber && !shell) ? ReachCamera::Bell(phase,.57f) : 0;
+        target.a[0]+=.38f*pull-.57f*close-.48f*seat+.28f*lift;
+        target.a[1]+=.07f*pull-.08f*seat;
+        target.a[2]-=.25f*pull-.22f*close-.20f*seat+.13f*lift;
+        target.p[0]-=.045f*pull-.055f*close;
+    }
     if( authored )
     {
         idVec3 cameraOrigin;idMat3 cameraAxis;
@@ -89,3 +108,4 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     }
     return true;
 }
+
