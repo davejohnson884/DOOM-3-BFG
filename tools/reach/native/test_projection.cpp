@@ -129,6 +129,9 @@ int main()
     Require(ReachActions::Press(consumed,true),"second semi-auto press rejected");
     Require(ReachProjection::Eligible("models/md5/weapons/reach_magnum/view.md5mesh",true,true,1,1,false,false),"Magnum projection rejected");
     Require(!ReachProjection::Eligible("models/md5/weapons/reach_magnum/view.md5mesh",false,true,1,1,false,false),"untagged Magnum modified");
+    Require(ReachProjection::Eligible("models/md5/weapons/reach_shotgun/view.md5mesh",true,true,1,1,false,false),"Shotgun projection rejected");
+    Require(ReachProjection::Eligible("reach_shotgun_flash.prt",true,true,1,1,false,false),"Shotgun flash rejected");
+    Require(!ReachProjection::Eligible("reach_shotgun_flash.prt",true,true,1,2,false,false),"Other view shotgun flash changed");
 	CheckCamera( 4.0f / 3.0f, 54.0 );
 	CheckCamera( 16.0f / 9.0f, 68.38180955042496 );
 	CheckCamera( 3440.0f / 1440.0f, 84.78589368943273 );
