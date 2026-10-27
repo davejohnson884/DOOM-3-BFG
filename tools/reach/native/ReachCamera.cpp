@@ -102,7 +102,9 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
         (owner->usercmd.forwardmove!=0 || owner->usercmd.rightmove!=0) && walkingSpeed>5;
     const ReachCamera::Motion stride=ReachCamera::ScaleMotion(reachCamera.Walk(now,walkingSpeed,walking),reach_cameraWalkScale.GetFloat());
     for(int i=0;i<3;++i) {target.p[i]+=stride.p[i];target.a[i]+=stride.a[i];}
-    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1"),shotgun);
+    const bool magnum=idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_magnum")==0;
+    const float shotGain=reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1")*(magnum ? 1.18f : 1.0f);
+    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,shotGain,shotgun);
     for( int i=0;i<3;++i ) {offset[i]=motion.p[i];angles[i]=motion.a[i];}
     if( cvarSystem->GetCVarBool("reach_cameraDebug") && reachCamera.debugTime!=now )
     {

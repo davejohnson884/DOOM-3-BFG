@@ -116,9 +116,9 @@ int main()
             Motion h=heavy.Evaluate(t,neutral,3.85f,true);
             lp=std::fmax(lp,-l.a[0]);hp=std::fmax(hp,-h.a[0]);
             for(int i=0;i<3;++i) {assert(std::isfinite(h.a[i]) && std::fabs(h.a[i])<=6);}
-            if(t>250) {for(int i=0;i<3;++i) {assert(h.a[i]==0 && h.p[i]==0);}}
+            if(t>300) {for(int i=0;i<3;++i) {assert(h.a[i]==0 && h.p[i]==0);}}
         }
-        assert(hp>lp*1.55f && hp<4.1f);
+        assert(hp>lp*2.05f && hp<5.6f);
     }
     // One shared gait: equal inputs yield equal motion for all three weapons.
     State gait[3];

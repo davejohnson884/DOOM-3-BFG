@@ -176,16 +176,26 @@ struct State
         Motion result=filtered;
         for( int i=0;i<4;++i )
         {
-            const float pulse=ShotPulse(now-shotTime[i])*Limit(shotScale,0,4);
+            const int age=now-shotTime[i];
+            const float impulse=heavyShot ? (age<=0 || age>=205 ? 0 :
+                (age<18 ? Smooth(float(age)/18) : 1-Smooth(float(age-18)/187))) : ShotPulse(age);
+            const float pulse=impulse*Limit(shotScale,0,4);
             // M45: a heavier shoulder impulse, then a small damped settle.
             // Default path keeps the accepted AR and Magnum response exact.
             const float settle=heavyShot ? EventPulse(float(now-shotTime[i])*.001f,
-                .10f,.16f,.23f)*Limit(shotScale,0,4) : 0;
-            result.a[0]-=(heavyShot ? 1.05f : .66f)*pulse-.12f*settle;
+                .12f,.19f,.28f)*Limit(shotScale,0,4) : 0;
+            result.a[0]-=(heavyShot ? 1.42f : .66f)*pulse-.18f*settle;
             result.a[1]+=.075f*float(shotSide[i])*pulse;
-            result.a[2]+=(heavyShot ? .18f : .12f)*float(shotSide[i])*pulse;
-            result.p[0]-=(heavyShot ? .10f : .035f)*pulse;
-            result.p[2]+=(heavyShot ? .040f : .025f)*pulse;
+            result.a[2]+=(heavyShot ? .24f : .12f)*float(shotSide[i])*pulse;
+            result.p[0]-=(heavyShot ? .15f : .035f)*pulse;
+            result.p[2]+=(heavyShot ? .055f : .025f)*pulse;
+            if(heavyShot && age>0 && age<150) {
+                // Compact damped shoulder vibration; presentation only.
+                const float seconds=float(age)*.001f;
+                const float shake=std::sin(seconds*88)*std::exp(-seconds*24)*Smooth(float(age)/8);
+                result.a[1]+=.28f*shake*float(shotSide[i]);
+                result.a[2]+=.38f*shake*float(shotSide[i]);
+            }
         }
         float length=0;
         for( int i=0;i<3;++i ) { length+=result.p[i]*result.p[i];result.a[i]=Limit(result.a[i],-6.0f,6.0f); }
