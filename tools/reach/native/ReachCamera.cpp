@@ -68,7 +68,8 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
             chamber ? .57f : .75f,chamber ? .67f : .87f,chamber ? .83f : 1.03f) : 0;
         const float seat=shell ? ReachCamera::EventPulse(seconds,.32f,.4333f,.50f) : 0;
         const float pumpGain=fire ? spawnArgs.GetFloat("reach_camera_pump_gain","1") :
-            (chamber ? spawnArgs.GetFloat("reach_camera_chamber_gain","1") : 1);
+            (chamber ? spawnArgs.GetFloat("reach_camera_chamber_gain",
+                weaponDef!=NULL ? weaponDef->dict.GetString("reach_camera_chamber_gain","1") : "1") : 1);
         const float lift=(strstr(name,"reload_enter")!=NULL) ? ReachCamera::Bell(phase,.57f) : 0;
         target.a[0]+=pumpGain*(.38f*pull-.57f*close)-.48f*seat+.28f*lift;
         target.a[1]+=.07f*pumpGain*pull-.08f*seat;
