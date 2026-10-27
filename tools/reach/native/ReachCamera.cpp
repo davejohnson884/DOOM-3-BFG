@@ -67,11 +67,13 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
         const float close=(fire || chamber) ? ReachCamera::EventPulse(seconds,
             chamber ? .57f : .75f,chamber ? .67f : .87f,chamber ? .83f : 1.03f) : 0;
         const float seat=shell ? ReachCamera::EventPulse(seconds,.32f,.4333f,.50f) : 0;
-        const float lift=(!fire && !chamber && !shell) ? ReachCamera::Bell(phase,.57f) : 0;
-        target.a[0]+=.38f*pull-.57f*close-.48f*seat+.28f*lift;
-        target.a[1]+=.07f*pull-.08f*seat;
-        target.a[2]-=.25f*pull-.22f*close-.20f*seat+.13f*lift;
-        target.p[0]-=.045f*pull-.055f*close;
+        const float pumpGain=fire ? spawnArgs.GetFloat("reach_camera_pump_gain","1") : 1;
+        const float lift=(strstr(name,"reload_enter")!=NULL) ? ReachCamera::Bell(phase,.57f) : 0;
+        target.a[0]+=pumpGain*(.38f*pull-.57f*close)-.48f*seat+.28f*lift;
+        target.a[1]+=.07f*pumpGain*pull-.08f*seat;
+        target.a[2]-=pumpGain*(.25f*pull-.22f*close)-.20f*seat+.13f*lift;
+        target.p[0]-=pumpGain*(.045f*pull-.055f*close);
+        if(fire) {target.p[0]-=.22f*ReachCamera::EventPulse(seconds,0,.025f,.19f);}
     }
     if( authored )
     {

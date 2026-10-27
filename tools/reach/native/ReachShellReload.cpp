@@ -21,7 +21,7 @@ bool idWeapon::ReachShellReload( int channel )
     const bool interrupt=spawnArgs.GetBool("_reach_shellInterrupt") && ammoClip.Get()>0;
     const bool canLoad=ammoClip.Get()<clipSize && owner->inventory.HasAmmo(ammoType,ammoRequired)!=0;
     const char* next=NULL;
-    if( phase!=3 && canLoad && !interrupt )
+    if( phase!=3 && phase!=4 && canLoad && !interrupt )
     {
         phase=2;next="reload_shell";
         spawnArgs.SetBool("_reach_shellCommitted",false);
@@ -30,6 +30,12 @@ bool idWeapon::ReachShellReload( int channel )
     else if( phase!=3 && spawnArgs.GetBool("_reach_shellStartedEmpty") && ammoClip.Get()>0 )
     {
         phase=3;next="reload_chamber";
+    }
+    else if( phase==2 && !spawnArgs.GetBool("_reach_shellStartedEmpty") )
+    {
+        // A loaded tube needs a real lowering/hand-return transition. The
+        // unchanged shared script's two-frame idle blend otherwise snaps.
+        phase=4;next="reload_exit_loaded";
     }
     if( next!=NULL )
     {
@@ -44,3 +50,4 @@ bool idWeapon::ReachShellReload( int channel )
     spawnArgs.SetBool("_reach_shellFireQueued",interrupt);
     idThread::ReturnInt(true);return true;
 }
+

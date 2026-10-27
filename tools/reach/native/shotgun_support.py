@@ -67,6 +67,9 @@ def extend(changed,replace):
 \t\t\tif( projectileEnt )''',weapon)
     w=replace(w,'static bool ReachCombatWeapon( const idDict& args )\n',
         (Path(__file__).parent/'ReachShellReload.cpp').read_text()+'\nstatic bool ReachCombatWeapon( const idDict& args )\n',weapon)
+    w=replace(w,'\tdebris->Create( owner, origin, axis );','    if(ReachCombatWeapon(spawnArgs) && spawnArgs.GetBool("reach_shell_reload"))\n    {\n        // Present the shell base first, then tumble across the foreground.\n        axis=playerViewAxis;\n    }\n\tdebris->Create( owner, origin, axis );',weapon)
+    w=replace(w,'\tdebris->GetPhysics()->SetLinearVelocity( linear_velocity );','    if(ReachCombatWeapon(spawnArgs) && spawnArgs.GetBool("reach_shell_reload"))\n    {\n        const float variation=1.0f+.08f*gameLocal.random.CRandomFloat();\n        // Source reference: close foreground, upward/right, rather than the\n        // rifle\'s fast forward-moving casing. Owner velocity is inherited.\n        linear_velocity=playerViewAxis[0]*(-18.0f+3.0f*gameLocal.random.CRandomFloat())-\n            playerViewAxis[1]*(85.0f*variation)+playerViewAxis[2]*(65.0f*variation)+\n            owner->GetPhysics()->GetLinearVelocity();\n    }\n\tdebris->GetPhysics()->SetLinearVelocity( linear_velocity );',weapon)
+    w=replace(w,'\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );','    if(ReachCombatWeapon(spawnArgs) && spawnArgs.GetBool("reach_shell_reload"))\n    {\n        angular_velocity=playerViewAxis[0]*3.0f+playerViewAxis[1]*14.0f+\n            playerViewAxis[2]*(22.0f+2.0f*gameLocal.random.CRandomFloat());\n    }\n\tdebris->GetPhysics()->SetAngularVelocity( angular_velocity );',weapon)
     changed[weapon]=w
     h=changed[header];needle='bool ReachCameraMotion'
     assert h.count(needle)==1
@@ -75,3 +78,4 @@ def extend(changed,replace):
     assert p.count(expr)==1
     changed[player]=p.replace(expr,'( '+expr+' || '+expr.replace('viewmodel_reach_magnum','viewmodel_reach_shotgun')+' )')
     return changed
+
