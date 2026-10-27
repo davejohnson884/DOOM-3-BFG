@@ -67,7 +67,8 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
         const float close=(fire || chamber) ? ReachCamera::EventPulse(seconds,
             chamber ? .57f : .75f,chamber ? .67f : .87f,chamber ? .83f : 1.03f) : 0;
         const float seat=shell ? ReachCamera::EventPulse(seconds,.32f,.4333f,.50f) : 0;
-        const float pumpGain=fire ? spawnArgs.GetFloat("reach_camera_pump_gain","1") : 1;
+        const float pumpGain=fire ? spawnArgs.GetFloat("reach_camera_pump_gain","1") :
+            (chamber ? spawnArgs.GetFloat("reach_camera_chamber_gain","1") : 1);
         const float lift=(strstr(name,"reload_enter")!=NULL) ? ReachCamera::Bell(phase,.57f) : 0;
         target.a[0]+=pumpGain*(.38f*pull-.57f*close)-.48f*seat+.28f*lift;
         target.a[1]+=.07f*pumpGain*pull-.08f*seat;
@@ -100,7 +101,7 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
         (owner->usercmd.forwardmove!=0 || owner->usercmd.rightmove!=0) && walkingSpeed>5;
     const ReachCamera::Motion stride=ReachCamera::ScaleMotion(reachCamera.Walk(now,walkingSpeed,walking),reach_cameraWalkScale.GetFloat());
     for(int i=0;i<3;++i) {target.p[i]+=stride.p[i];target.a[i]+=stride.a[i];}
-    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1"));
+    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1"),shotgun);
     for( int i=0;i<3;++i ) {offset[i]=motion.p[i];angles[i]=motion.a[i];}
     if( cvarSystem->GetCVarBool("reach_cameraDebug") && reachCamera.debugTime!=now )
     {
@@ -110,4 +111,3 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     }
     return true;
 }
-

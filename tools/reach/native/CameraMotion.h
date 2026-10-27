@@ -117,10 +117,10 @@ inline Motion WalkingMotion( float phase, float strength )
 {
     Motion m;const float p=6.28318530718f*phase;
     strength=Limit(strength,0,1.25f);
-    m.a[0]=.18f*std::sin(p*2)*strength;
-    m.a[1]=.055f*std::sin(p)*strength;
-    m.a[2]=.24f*std::sin(p)*strength;
-    m.p[2]=.075f*std::sin(p*2)*strength;
+    m.a[0]=.225f*std::sin(p*2)*strength;
+    m.a[1]=.06875f*std::sin(p)*strength;
+    m.a[2]=.30f*std::sin(p)*strength;
+    m.p[2]=.09375f*std::sin(p*2)*strength;
     return m;
 }
 struct State
@@ -154,7 +154,7 @@ struct State
         lastShot=now;shotTime[nextShot]=now;shotSide[nextShot]=(sequence++&1) ? -1 : 1;
         nextShot=(nextShot+1)%4;
     }
-    Motion Evaluate( int now, const Motion& target, float shotScale=1 )
+    Motion Evaluate( int now, const Motion& target, float shotScale=1, bool heavyShot=false )
     {
         if( lastTime>=0 && now<lastTime ) { Reset(); }
         if( lastTime<0 || now<lastTime || now-lastTime>250 )
@@ -177,11 +177,15 @@ struct State
         for( int i=0;i<4;++i )
         {
             const float pulse=ShotPulse(now-shotTime[i])*Limit(shotScale,0,4);
-            result.a[0]-=.66f*pulse;
+            // M45: a heavier shoulder impulse, then a small damped settle.
+            // Default path keeps the accepted AR and Magnum response exact.
+            const float settle=heavyShot ? EventPulse(float(now-shotTime[i])*.001f,
+                .10f,.16f,.23f)*Limit(shotScale,0,4) : 0;
+            result.a[0]-=(heavyShot ? 1.05f : .66f)*pulse-.12f*settle;
             result.a[1]+=.075f*float(shotSide[i])*pulse;
-            result.a[2]+=.12f*float(shotSide[i])*pulse;
-            result.p[0]-=.035f*pulse;
-            result.p[2]+=.025f*pulse;
+            result.a[2]+=(heavyShot ? .18f : .12f)*float(shotSide[i])*pulse;
+            result.p[0]-=(heavyShot ? .10f : .035f)*pulse;
+            result.p[2]+=(heavyShot ? .040f : .025f)*pulse;
         }
         float length=0;
         for( int i=0;i<3;++i ) { length+=result.p[i]*result.p[i];result.a[i]=Limit(result.a[i],-6.0f,6.0f); }
