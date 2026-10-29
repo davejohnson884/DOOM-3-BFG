@@ -33,6 +33,9 @@ def extend(changed,replace):
  w=replace(w,'    if(ReachShellReload(channel)) {return;}','    if(ReachRepeaterAnimDone(channel)) {return;}\n    if(ReachShellReload(channel)) {return;}',f)
  anchor='\t// Predict clip ammo on locally controlled MP clients.'
  w=replace(w,anchor,'    if(!ReachRepeaterShot()) {return;}\n'+anchor,f)
+ w=replace(w,'\t\tEvent_StartWeaponParticle( "reach_fp_flash" );','\t\tEvent_StartWeaponParticle( "reach_fp_flash" );\n        if(ReachRepeaterWeapon()) {Event_StartWeaponParticle("reach_fp_repeater_upper");}',f)
+ w=replace(w,'if( ( weaponDef != NULL && weaponDef->dict.GetBool( "reach_native_muzzle_fx" ) ) )\n\t\t{\n\t\t\tWeaponParticle_t* smoke = NULL;',
+  'if( !ReachRepeaterWeapon() && ( weaponDef != NULL && weaponDef->dict.GetBool( "reach_native_muzzle_fx" ) ) )\n\t\t{\n\t\t\tWeaponParticle_t* smoke = NULL;',f)
  w+='\n'+(root/'ReachRepeater.cpp').read_text();changed[f]=w
- h='neo/d3xp/Weapon.h';changed[h]=replace(changed[h],'\tbool                    ReachShellReload( int channel );','\tbool                    ReachShellReload( int channel );\n    bool ReachRepeaterWeapon() const;\n    void ReachRepeaterUpdate();\n    bool ReachRepeaterShot();\n    bool ReachRepeaterAnimDone(int channel);',h)
+ h='neo/d3xp/Weapon.h';changed[h]=replace(changed[h],'\tbool                    ReachShellReload( int channel );','\tbool                    ReachShellReload( int channel );\n    bool ReachRepeaterWeapon() const;\n    void ReachRepeaterUpdate();\n    void ReachRepeaterVisuals();\n    bool ReachRepeaterShot();\n    bool ReachRepeaterAnimDone(int channel);',h)
  return changed

@@ -21,5 +21,21 @@ inline float Cool(float heat,float seconds,bool venting,bool firing) {
  return h;
 }
 inline float Shot(float heat) {return Clamp(heat+.03f);}
+// Reach function-overlay scalar bounds .5..1; source chase times .25/2.5 s.
+// The authored barrel_spin clip supplies the rotation, not per-shot restarts.
+inline float MotorTarget(float heat,bool firing,bool venting,bool energy) {
+ if(venting) {return 1.0f;}
+ return firing && energy ? .5f+.5f*(Rate(heat)-3.0f)/12.0f : 0.0f;
+}
+inline float ChaseMotor(float speed,float target,float seconds) {
+ speed=Clamp(speed);target=Clamp(target);if(seconds<=0) {return speed;}
+ const float amount=seconds/(target>speed?.25f:2.5f);
+ return target>speed ? (speed+amount<target?speed+amount:target) : (speed-amount>target?speed-amount:target);
+}
+inline float MotorPhase(float phase,float before,float after,float seconds,float clipSeconds) {
+ if(seconds<=0 || clipSeconds<=0) {return phase;}
+ const float value=phase+.5f*(before+after)*seconds/clipSeconds;
+ return value-std::floor(value);
+}
 }
 #endif

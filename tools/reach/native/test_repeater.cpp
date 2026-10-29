@@ -13,5 +13,10 @@ int main() {
  Check(ReachRepeater::Cool(1,2.5f,true,false)==0 && battery==60,"vent cannot refill battery");
  Check(ReachRepeater::Cool(1,30,false,false)==0,"holstered cooling");
  Check(ReachRepeater::Cool(.7f,1,false,true)==.7f,"no passive cooling while firing");
+ Check(ReachRepeater::MotorTarget(0,true,false,true)==1 && ReachRepeater::MotorTarget(1,true,false,true)==.5f,"source motor speed follows heat");
+ Check(ReachRepeater::MotorTarget(0,false,true,true)==1 && ReachRepeater::MotorTarget(0,true,false,false)==0,"vent spin and depleted stop");
+ float motor=0,phase=0;for(int i=0;i<120;++i) {float next=ReachRepeater::ChaseMotor(motor,1,1/120.0f);phase=ReachRepeater::MotorPhase(phase,motor,next,1/120.0f,2/3.0f);motor=next;}
+ Check(motor==1 && phase>0 && phase<1,"continuous motor phase while firing");
+ Check(ReachRepeater::ChaseMotor(1,0,.1f)>.9f && ReachRepeater::ChaseMotor(1,0,2.5f)==0,"source motor coasts rather than shot resets");
  std::puts("Repeater heat/battery/cadence checks passed");
 }
