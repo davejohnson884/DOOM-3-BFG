@@ -73,8 +73,8 @@ void idWeapon::ReachRepeaterVisuals() {
   renderEntity_t* re=part->emitter->GetRenderEntity();
   re->allowSurfaceInViewID=owner->entityNumber+1;re->weaponDepthHack=true;
   re->noShadow=true;re->noOverlays=true;re->shaderParms[6]=1.0f;
-  re->shaderParms[8]=heat;re->shaderParms[9]=renderEntity.shaderParms[9];re->shaderParms[10]=renderEntity.shaderParms[10];
-  re->shaderParms[7]=renderEntity.shaderParms[7];
+  // Particle parm 8 is SHADERPARM_PARTICLE_STOPTIME, not weapon heat.
+  // These sprites use vertexColor; leave their timing/control parms untouched.
   part->emitter->spawnArgs.SetBool("cycleTrigger",true);
  }
  const bool motorLive=spawnArgs.GetBool("_reach_repeaterMotorSound");
