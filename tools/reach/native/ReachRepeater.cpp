@@ -59,9 +59,12 @@ void idWeapon::ReachRepeaterVisuals() {
  animator.SetJointPos(right,JOINTMOD_LOCAL,idVec3(0,-1.2f*autoVent,0));
  renderEntity.shaderParms[9]=vent?1.0f:autoVent;
  renderEntity.shaderParms[10]=energy?1.0f:0.0f;
+ // The shared AR counter owns parms 9/10. Slot 7 is unused by the shared armor.
+ renderEntity.shaderParms[7]=energy?1.0f:0.0f;
  if(worldModel.GetEntity()!=NULL) {
   worldModel.GetEntity()->SetShaderParm(9,renderEntity.shaderParms[9]);
   worldModel.GetEntity()->SetShaderParm(10,renderEntity.shaderParms[10]);
+  worldModel.GetEntity()->SetShaderParm(7,renderEntity.shaderParms[7]);
  }
  // Tag every registered Repeater emitter with the same FP view/projection scope.
  for(int i=0;i<weaponParticles.Num();++i) {
@@ -71,6 +74,7 @@ void idWeapon::ReachRepeaterVisuals() {
   re->allowSurfaceInViewID=owner->entityNumber+1;re->weaponDepthHack=true;
   re->noShadow=true;re->noOverlays=true;re->shaderParms[6]=1.0f;
   re->shaderParms[8]=heat;re->shaderParms[9]=renderEntity.shaderParms[9];re->shaderParms[10]=renderEntity.shaderParms[10];
+  re->shaderParms[7]=renderEntity.shaderParms[7];
   part->emitter->spawnArgs.SetBool("cycleTrigger",true);
  }
  const bool motorLive=spawnArgs.GetBool("_reach_repeaterMotorSound");
