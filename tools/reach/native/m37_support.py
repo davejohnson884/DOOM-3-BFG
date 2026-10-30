@@ -34,4 +34,32 @@ def extend(changed,replace):
         {idThread::ReturnInt(true);return;}
     }
 ''',f)
+ # Track actual trigger edges separately from script-only attack flags. This
+ # resets a short re-press even while the previous fire animation is recovering.
+ identity='!common->IsMultiplayer() && idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_m37")==0'
+ w=replace(w,'void idWeapon::BeginAttack()\n{\n','void idWeapon::BeginAttack()\n{\n    if('+identity+') {\n        if(!spawnArgs.GetBool("_reach_m37TriggerDown")) {spawnArgs.SetInt("_reach_m37BurstStart",-1);}\n        spawnArgs.SetBool("_reach_m37TriggerDown",true);\n    }\n',f)
+ w=replace(w,'void idWeapon::EndAttack()\n{\n','void idWeapon::EndAttack()\n{\n    if('+identity+' && spawnArgs.GetBool("_reach_m37TriggerDown")) {\n        spawnArgs.SetBool("_reach_m37TriggerDown",false);spawnArgs.SetInt("_reach_m37BurstStart",-1);\n    }\n',f)
+ w=replace(w,'void idWeapon::Event_WeaponState( const char* statename, int blendFrames )\n{\n','void idWeapon::Event_WeaponState( const char* statename, int blendFrames )\n{\n    if('+identity+' && idStr::Cmp(statename,"Fire")!=0) {spawnArgs.SetInt("_reach_m37BurstStart",-1);}\n',f)
+ # Retain the existing shared script and its serialized layout. Override only
+ # its already-declared next_attack float after a successful projectile launch.
+ start=w.index('void idWeapon::Event_LaunchProjectiles( ');end=w.index('void idWeapon::Event_LaunchProjectilesEllipse(',start)
+ launch=w[start:end]
+ anchor='\towner->WeaponFireFeedback( &weaponDef->dict );\n'
+ ramp='''    if(!common->IsMultiplayer() && idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_m37")==0)
+    {
+        byte* nextAttack=scriptObject.GetVariable("next_attack",ev_float);
+        if(nextAttack!=NULL)
+        {
+            SetTimeState m37BurstClock(timeGroup);
+            int started=spawnArgs.GetInt("_reach_m37BurstStart","-1");
+            if(started<0 || gameLocal.time<started) {started=gameLocal.time;spawnArgs.SetInt("_reach_m37BurstStart",started);}
+            const float fullInterval=spawnArgs.GetFloat("reach_fire_interval",".066");
+            const int rampMs=spawnArgs.GetInt("reach_m37_ramp_ms",weaponDef->dict.GetString("reach_m37_ramp_ms","300"));
+            const float interval=ReachActions::M37FireInterval(gameLocal.time-started,fullInterval,rampMs);
+            *reinterpret_cast<float*>(nextAttack)=float(gameLocal.time)*.001f+interval;
+            if(cvarSystem->GetCVarBool("g_debugWeapon")) {gameLocal.Printf("[ReachM37Ramp] t=%d age=%d next=%.6f\\n",gameLocal.time,gameLocal.time-started,interval);}
+        }
+    }
+'''
+ launch=replace(launch,anchor,ramp+anchor,f);w=w[:start]+launch+w[end:]
  changed[f]=w;return changed

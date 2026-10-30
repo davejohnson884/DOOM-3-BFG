@@ -65,7 +65,10 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
         const float localGain=spawnArgs.GetFloat("reach_m37_camera_reload_gain",
             weaponDef!=NULL ? weaponDef->dict.GetString("reach_m37_camera_reload_gain","1") : "1");
         const float seconds=blend!=NULL ? float(blend->AnimTime(now))*.001f : 0;
-        target=ReachCamera::ScaleMotion(ReachCamera::M37ReloadMotion(strstr(name,"reload_empty")!=NULL,seconds),gain*localGain);
+        const bool emptyReload=strstr(name,"reload_empty")!=NULL;
+        const float emptyGain=emptyReload ? spawnArgs.GetFloat("reach_m37_camera_empty_reload_gain",
+            weaponDef!=NULL ? weaponDef->dict.GetString("reach_m37_camera_empty_reload_gain","1.35") : "1.35") : 1;
+        target=ReachCamera::ScaleMotion(ReachCamera::M37ReloadMotion(emptyReload,seconds),gain*localGain*emptyGain);
     }
     if(shotgunAction)
     {

@@ -1,4 +1,5 @@
 #include "CameraMotion.h"
+#include "WeaponActions.h"
 #include <cassert>
 #include <cmath>
 #include <cstdio>
@@ -6,6 +7,19 @@
 int main()
 {
     using namespace ReachCamera;
+    // Ramp stays bounded/monotone, reaches exact full cadence, and starts
+    // fresh when the caller resets its burst clock. A zero duration opts out.
+    const float m37FullInterval=.066f;
+    float m37Previous=ReachActions::M37FireInterval(0,m37FullInterval,300);
+    assert(std::fabs(m37Previous-.099f)<.000001f);
+    for(int ms=1;ms<=500;++ms) {
+        const float interval=ReachActions::M37FireInterval(ms,m37FullInterval,300);
+        assert(interval<=m37Previous && interval>=m37FullInterval);
+        if(ms>=300) {assert(interval==m37FullInterval);}
+        m37Previous=interval;
+    }
+    assert(ReachActions::M37FireInterval(0,m37FullInterval,0)==m37FullInterval);
+    assert(ReachActions::M37FireInterval(0,m37FullInterval,300)>ReachActions::M37FireInterval(299,m37FullInterval,300));
     for( int p=Reload;p<=Throw;++p )
     {
         if( p==SprintLoop ) {continue;}
