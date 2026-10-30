@@ -134,11 +134,11 @@ int main()
     for(bool empty:{false,true}) {
         for(int step:{8,16,33}) {
             State state;float boltPeak=0,outPeak=0,inPeak=0,seatPeak=0;
-            Motion neutral, settled;
+            Motion m37Neutral, settled;
             for(int ms=0;ms<5500;ms+=step) {
                 const float sec=float(ms)*.001f;
-                Motion target=ScaleMotion(M37ReloadMotion(empty,sec),2.5f);
-                Motion v=state.Evaluate(ms,target);
+                Motion m37Target=ScaleMotion(M37ReloadMotion(empty,sec),2.5f);
+                Motion v=state.Evaluate(ms,m37Target);
                 for(int i=0;i<3;++i) {assert(std::isfinite(v.a[i]) && std::fabs(v.a[i])<3);}
                 if(sec>.45f && sec<.75f) {boltPeak=std::fmax(boltPeak,-v.a[0]);}
                 if(sec>(empty ? 1.40f : .90f) && sec<(empty ? 1.85f : 1.40f)) {outPeak=std::fmax(outPeak,v.a[0]);}
@@ -150,9 +150,9 @@ int main()
             if(empty) {assert(boltPeak>1.0f);} else {assert(boltPeak==0);}
             for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
             // Cancelling a reload must settle through the existing filter.
-            State cancel;cancel.Evaluate(0,neutral);
+            State cancel;cancel.Evaluate(0,m37Neutral);
             for(int ms=step;ms<1600;ms+=step) {cancel.Evaluate(ms,ScaleMotion(M37ReloadMotion(empty,float(ms)*.001f),2.5f));}
-            for(int ms=1600;ms<2600;ms+=step) {settled=cancel.Evaluate(ms,neutral);}
+            for(int ms=1600;ms<2600;ms+=step) {settled=cancel.Evaluate(ms,m37Neutral);}
             for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
         }
     }
