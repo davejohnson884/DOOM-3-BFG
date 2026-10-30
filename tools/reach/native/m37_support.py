@@ -18,4 +18,20 @@ def extend(changed,replace):
         }
     }
 ''',f)
+ # Allow the restored visual recovery tail to finish while idle. Holding fire
+ # may still interrupt at the first draft's graph-ready time, after ammo fill.
+ w=replace(w,'void idWeapon::Event_AnimDone( int channel, int blendFrames )\n{\n','''void idWeapon::Event_AnimDone( int channel, int blendFrames )
+{
+    if(!common->IsMultiplayer() && channel==ANIMCHANNEL_ALL && WEAPON_ATTACK &&
+       idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_m37")==0)
+    {
+        const idAnimBlend* recovery=animator.CurrentAnim(ANIMCHANNEL_ALL);
+        const char* name=recovery!=NULL ? recovery->AnimFullName() : "";
+        const bool full=idStr::Cmp(name,"reload_full")==0;
+        const bool empty=idStr::Cmp(name,"reload_empty")==0;
+        const int ready=full ? 3067 : 3767;
+        if((full || empty) && recovery->AnimTime(gameLocal.time)>=ready)
+        {idThread::ReturnInt(true);return;}
+    }
+''',f)
  changed[f]=w;return changed
