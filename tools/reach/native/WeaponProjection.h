@@ -32,10 +32,8 @@ inline bool Eligible( const char* model, bool tagged, bool depthHack,
         ModelNamed( model, "reach_magnum_flash.prt" ) ||
         ModelNamed( model, "models/md5/weapons/reach_shotgun/view.md5mesh" ) ||
         ModelNamed( model, "reach_shotgun_flash.prt" ) ||
-        ModelNamed( model, "models/md5/weapons/reach_plasma_repeater/view.md5mesh" ) ||
-        ModelNamed( model, "reach_plasma_repeater_flash.prt" ) ||
-        ModelNamed( model, "reach_plasma_repeater_vent.prt" ) ||
-        ModelNamed( model, "reach_plasma_repeater_arc.prt" ) ||
+        ModelNamed( model, "models/md5/weapons/reach_m37/view.md5mesh" ) ||
+        ModelNamed( model, "reach_m37_flash.prt" ) ||
 		ModelNamed( model, "reach_ar_flash.prt" ) || ModelNamed( model, "reach_ar_flash_r15.prt" ) ||
         ModelNamed( model, "reach_ar_brake_native.prt" );
 }

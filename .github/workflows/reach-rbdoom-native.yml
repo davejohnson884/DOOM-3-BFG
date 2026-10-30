@@ -60,13 +60,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & build/test_camera.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Check Repeater heat and independent battery
-        shell: pwsh
-        run: |
-          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_repeater.cpp /Fe:build/test_repeater.exe /Fo:build/test_repeater.obj
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & build/test_repeater.exe
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Apply extension to the exact published source
         shell: pwsh
         run: python tools/reach/native/apply_rbdoom.py rbdoom

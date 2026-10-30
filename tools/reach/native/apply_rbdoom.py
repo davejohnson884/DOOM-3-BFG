@@ -418,8 +418,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed = extend(changed, replace)
     from shotgun_support import extend as shotgun_extend
     changed = shotgun_extend(changed, replace)
-    from repeater_support import extend as repeater_extend
-    changed = repeater_extend(changed, replace)
+    from m37_support import extend as m37_extend
+    changed = m37_extend(changed, replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
@@ -434,7 +434,6 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())
     (root/'neo/d3xp/ReachCameraMotion.h').write_bytes((ROOT/'CameraMotion.h').read_bytes())
     (root/'neo/d3xp/ReachWeaponActions.h').write_bytes((ROOT/'WeaponActions.h').read_bytes())
-    (root/'neo/d3xp/ReachRepeaterHeat.h').write_bytes((ROOT/'RepeaterHeat.h').read_bytes())
     print('Applied projection extension to pinned RBDoom '+UPSTREAM)
     print('Default off; restricted to tagged owner FP rifle/flash; public entity/save/demo formats unchanged.')
 

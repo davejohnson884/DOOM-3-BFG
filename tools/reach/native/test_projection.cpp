@@ -132,6 +132,11 @@ int main()
     Require(ReachProjection::Eligible("models/md5/weapons/reach_shotgun/view.md5mesh",true,true,1,1,false,false),"Shotgun projection rejected");
     Require(ReachProjection::Eligible("reach_shotgun_flash.prt",true,true,1,1,false,false),"Shotgun flash rejected");
     Require(!ReachProjection::Eligible("reach_shotgun_flash.prt",true,true,1,2,false,false),"Other view shotgun flash changed");
+    for(const char* model : {"models/md5/weapons/reach_m37/view.md5mesh","reach_m37_flash.prt"}) {
+        Require(ReachProjection::Eligible(model,true,true,1,1,false,false),"M37 owner projection rejected");
+        Require(!ReachProjection::Eligible(model,true,true,1,2,false,false),"M37 leaked into another view");
+        Require(!ReachProjection::Eligible(model,true,true,1,1,false,true),"M37 mirror scope changed");
+    }
 	CheckCamera( 4.0f / 3.0f, 54.0 );
 	CheckCamera( 16.0f / 9.0f, 68.38180955042496 );
 	CheckCamera( 3440.0f / 1440.0f, 84.78589368943273 );
