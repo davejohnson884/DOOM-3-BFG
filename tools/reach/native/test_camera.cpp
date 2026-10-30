@@ -129,5 +129,32 @@ int main()
             for(int axis=0;axis<3;++axis) {assert(v.a[axis]==ref.a[axis] && v.p[axis]==ref.p[axis]);}
         }
     }
-    std::puts("PASS camera recovery, duplicate-query safety, rate independence, shot settling and bounds");
+    // Independent M37 action windows from the source magazine/bolt tracks.
+    // The empty bolt precedes mag extraction; tactical reload has no bolt kick.
+    for(bool empty:{false,true}) {
+        for(int step:{8,16,33}) {
+            State state;float boltPeak=0,outPeak=0,inPeak=0,seatPeak=0;
+            Motion neutral, settled;
+            for(int ms=0;ms<5500;ms+=step) {
+                const float sec=float(ms)*.001f;
+                Motion target=ScaleMotion(M37ReloadMotion(empty,sec),2.5f);
+                Motion v=state.Evaluate(ms,target);
+                for(int i=0;i<3;++i) {assert(std::isfinite(v.a[i]) && std::fabs(v.a[i])<3);}
+                if(sec>.45f && sec<.75f) {boltPeak=std::fmax(boltPeak,-v.a[0]);}
+                if(sec>(empty ? 1.40f : .90f) && sec<(empty ? 1.85f : 1.40f)) {outPeak=std::fmax(outPeak,v.a[0]);}
+                if(sec>(empty ? 2.50f : 2.20f) && sec<(empty ? 2.90f : 2.57f)) {inPeak=std::fmax(inPeak,-v.a[0]);}
+                if(sec>(empty ? 3.00f : 2.90f) && sec<3.30f) {seatPeak=std::fmax(seatPeak,-v.a[0]);}
+                settled=v;
+            }
+            assert(outPeak>1.5f && inPeak>1.5f && seatPeak>.45f);
+            if(empty) {assert(boltPeak>1.0f);} else {assert(boltPeak==0);}
+            for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
+            // Cancelling a reload must settle through the existing filter.
+            State cancel;cancel.Evaluate(0,neutral);
+            for(int ms=step;ms<1600;ms+=step) {cancel.Evaluate(ms,ScaleMotion(M37ReloadMotion(empty,float(ms)*.001f),2.5f));}
+            for(int ms=1600;ms<2600;ms+=step) {settled=cancel.Evaluate(ms,neutral);}
+            for(int i=0;i<3;++i) {assert(settled.a[i]==0 && settled.p[i]==0);}
+        }
+    }
+    std::puts("PASS camera recovery, duplicate-query safety, rate independence, shot settling, bounds and M37 source-timed actions");
 }

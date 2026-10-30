@@ -54,6 +54,28 @@ inline Motion ReloadMotion( bool empty, float phase )
     m.a[2]=-.160f*hold-.420f*out+.560f*in+.140f*seat+.300f*bolt-.100f*boltSettle;
     return m;
 }
+inline Motion M37ReloadMotion( bool empty, float seconds )
+{
+    Motion m;
+    const float duration=empty ? 124.0f/30 : 119.0f/30;
+    if( seconds<=0 || seconds>=duration ) {return m;}
+    // M37 v2 source nodes at30Hz: tactical mag pull frames27-36, seat67-70,
+    // final hand seating87-90. Empty: bolt12-27 BEFORE mag pull42-51,
+    // insertion74-81, final seat90-93. Do not reuse the much shorter AR beat.
+    const float hold=Bell(seconds/duration,.40f);
+    const float out=EventPulse(seconds,empty ? 1.30f : .80f,empty ? 1.58f : 1.10f,empty ? 1.88f : 1.43f);
+    const float in=EventPulse(seconds,empty ? 2.42f : 2.14f,empty ? 2.69f : 2.30f,empty ? 2.90f : 2.57f);
+    const float seat=EventPulse(seconds,empty ? 2.94f : 2.82f,empty ? 3.10f : 3.00f,empty ? 3.31f : 3.23f);
+    const float bolt=empty ? EventPulse(seconds,.35f,.64f,.80f) : 0;
+    const float release=empty ? EventPulse(seconds,.72f,.84f,1.04f) : 0;
+    m.a[0]=.12f*hold+.65f*out-.82f*in-.28f*seat-.58f*bolt+.22f*release;
+    m.a[1]=.04f*hold+.15f*out-.11f*in+.07f*bolt;
+    m.a[2]=-.14f*hold-.48f*out+.55f*in+.20f*seat+.32f*bolt-.13f*release;
+    m.p[0]=-.04f*hold-.09f*out+.09f*in+.025f*seat-.065f*bolt;
+    m.p[1]=.025f*hold+.045f*out-.035f*in;
+    m.p[2]=-.025f*hold-.04f*out+.05f*in+.02f*seat;
+    return m;
+}
 inline Motion ProfileMotion( Profile profile, float t )
 {
     Motion m;
