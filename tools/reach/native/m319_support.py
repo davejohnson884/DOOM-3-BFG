@@ -46,6 +46,10 @@ def extend(changed,replace):
         renderEntity.shaderParms[11]=spawnArgs.GetInt("_m319_displayUntil")>=gameLocal.time ? float(spawnArgs.GetInt("_m319_status")) : 0.0f;
     }
 ''',f)
+ w=replace(w,'int\tidWeapon::GetZoomFov()\n{\n','''int\tidWeapon::GetZoomFov()
+{
+    if(!common->IsMultiplayer() && owner!=NULL && spawnArgs.GetBool("reach_m319")) return int(owner->DefaultFov());
+''',f)
  changed[f]=w
  f='neo/d3xp/Projectile.cpp';p=changed[f]
  from pathlib import Path

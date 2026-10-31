@@ -6,15 +6,16 @@
         const bool held=player!=NULL && player->health>0 && (player->usercmd.buttons&BUTTON_ATTACK)!=0 &&
             player->weapon.GetEntity()!=NULL && player->weapon.GetEntity()->spawnArgs.GetBool("reach_m319");
         const int age=gameLocal.time-spawnArgs.GetInt("_m319_launch");
+        const idVec3 previous=spawnArgs.GetVector("_m319_prev");
+        const float oldDistance=spawnArgs.GetFloat("_m319_distance");
+        const float travelled=oldDistance+(GetPhysics()->GetOrigin()-previous).Length();
         if(!spawnArgs.GetBool("_m319_bounced")) {
-            const idVec3 previous=spawnArgs.GetVector("_m319_prev");
-            const float travelled=spawnArgs.GetFloat("_m319_distance")+(GetPhysics()->GetOrigin()-previous).Length();
-            const float lastSpeed=ReachM319::FlightSpeed(spawnArgs.GetFloat("_m319_distance"));
             const float desired=ReachM319::FlightSpeed(travelled);
             idVec3 velocity=GetPhysics()->GetLinearVelocity();idVec3 direction=velocity;direction.Normalize();
-            velocity+=direction*(desired-lastSpeed);GetPhysics()->SetLinearVelocity(velocity);
-            spawnArgs.SetFloat("_m319_distance",travelled);spawnArgs.SetVector("_m319_prev",GetPhysics()->GetOrigin());
+            velocity+=direction*(desired-ReachM319::FlightSpeed(oldDistance));GetPhysics()->SetLinearVelocity(velocity);
         }
+        spawnArgs.SetFloat("_m319_distance",travelled);spawnArgs.SetVector("_m319_prev",GetPhysics()->GetOrigin());
+        if(travelled>=12000) {Event_Explode();return;}
         const int old=spawnArgs.GetInt("_m319_latch");
         const int mode=ReachM319::Step(old,held,age,spawnArgs.GetBool("_m319_bounced"));
         spawnArgs.SetInt("_m319_latch",mode);
