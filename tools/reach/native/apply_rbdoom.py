@@ -21,7 +21,7 @@ def apply(root):
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
              'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp',
-             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp', 'neo/d3xp/SmokeParticles.cpp']
+             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp', 'neo/d3xp/SmokeParticles.cpp', 'neo/renderer/ModelManager.cpp']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')
@@ -420,6 +420,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed = shotgun_extend(changed, replace)
     from m37_support import extend as m37_extend
     changed = m37_extend(changed, replace)
+    from spartan_support import extend as spartan_extend
+    changed = spartan_extend(changed, replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
@@ -430,6 +432,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     for path in paths:
         (root/path).write_text(changed[path], encoding='utf-8', newline='\n')
     helper.write_bytes((ROOT/'WeaponProjection.h').read_bytes())
+    (root/'neo/renderer/ReachSpartanModelAliases.h').write_bytes((ROOT/'SpartanModelAliases.h').read_bytes())
     (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
     (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())
     (root/'neo/d3xp/ReachCameraMotion.h').write_bytes((ROOT/'CameraMotion.h').read_bytes())

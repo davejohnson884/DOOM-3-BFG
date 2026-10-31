@@ -1,0 +1,134 @@
+name: Reach RBDoom repair r15
+
+on:
+  push:
+    branches: [reach-combat]
+    paths:
+      - 'tools/reach/native/**'
+      - '.github/workflows/reach-rbdoom-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: RobertBeckebans/RBDOOM-3-BFG
+          ref: ba39ba67df049dcf16c7b31f6613f72959be2c21
+          path: rbdoom
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Pin supported CMake
+        shell: pwsh
+        run: |
+          python -m pip install cmake==3.31.6
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+      - name: Check projection math and first-person scope
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory build -Force | Out-Null
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_projection.cpp /Fe:build/test_projection.exe /Fo:build/test_projection.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_projection.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_quick_actions.cpp /Fe:build/test_quick_actions.exe /Fo:build/test_quick_actions.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_quick_actions.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check muzzle selection and smoke projection
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_muzzle.cpp /Fe:build/test_muzzle.exe /Fo:build/test_muzzle.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_muzzle.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check animation camera timing and recovery
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_camera.cpp /Fe:build/test_camera.exe /Fo:build/test_camera.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_camera.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test saved Spartan player model mapping
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_spartan.cpp /Fe:build/test_spartan.exe /Fo:build/test_spartan.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_spartan.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Apply extension to the exact published source
+        shell: pwsh
+        run: python tools/reach/native/apply_rbdoom.py rbdoom
+      - name: Verify build dependencies and configure Win64 DX12 and Vulkan
+        shell: pwsh
+        run: ./tools/reach/native/prepare-build.ps1 -Source rbdoom -Dependencies '${{ runner.temp }}/reach-build-deps'
+      - name: Build the released foundation with the opt-in extension
+        shell: pwsh
+        run: |
+          cmake --build rbdoom/build-reach --config Release --target RBDoom3BFG --parallel 4 2>&1 | Tee-Object -FilePath build/native-build.log
+          $nativeBuildExit = $LASTEXITCODE
+          if ($nativeBuildExit -ne 0) {
+            $errors = @(Select-String -LiteralPath build/native-build.log -Pattern '(?i)(fatal error|error C[0-9]+|error LNK[0-9]+|error MSB[0-9]+|error:|CMake Error)' | Select-Object -First 15)
+            foreach ($line in $errors) {
+              $message = $line.Line.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+              Write-Host "::error title=Native compiler::$message"
+            }
+            if ($errors.Count -eq 0) { Write-Host '::error title=Native compiler::Build failed; full output is in reach-rbdoom-build-evidence.' }
+            exit $nativeBuildExit
+          }
+      - name: Verify existing diagnostic capture
+        shell: powershell
+        run: ./tools/reach/rbdoom/test-capture.ps1
+      - name: Verify actual candidate CMD launch
+        shell: powershell
+        run: ./tools/reach/native/test-input-launch.ps1
+      - name: Validate and freeze installed private asset repair tool
+        shell: pwsh
+        run: |
+          python -m pip install pyinstaller==6.16.0
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/reach/native/test_repair.py rbdoom
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '::error title=Asset repair::Installed-pack fixtures or pinned particle-parser contract failed.'
+            exit 1
+          }
+          python -m PyInstaller --noconfirm --clean --onefile --console --name ReachRepair --distpath build/repair-tool --workpath build/repair-work --specpath build tools/reach/native/repair_assets.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/repair-tool/ReachRepair.exe --help
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package separate executable and asset-free overlay
+        shell: pwsh
+        run: |
+          python tools/reach/native/check_combat.py rbdoom
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/reach/native/build_combat.py build/Reach-repair-r15.zip --engine rbdoom/build-reach/Release/RBDoom3BFG.exe --capture build/ReachDebugLog.exe --source rbdoom --repair build/repair-tool/ReachRepair.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reach-repair-r15
+          path: build/Reach-repair-r15.zip
+          if-no-files-found: error
+      - name: Preserve build evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reach-rbdoom-build-evidence
+          path: |
+            build/native-build.log
+            rbdoom/build-reach/CMakeCache.txt
+            rbdoom/build-reach/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
+
+
+
