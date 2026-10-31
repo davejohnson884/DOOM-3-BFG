@@ -1,5 +1,6 @@
 #include "SpartanModelAliases.h"
 #include <cassert>
+#include <cstring>
 int main() {
     assert(ReachSpartan::Replacement(NULL)==NULL);
     assert(ReachSpartan::Replacement("models/md5/characters/npcs/playermoves/mpplayer.md5mesh")==NULL);
@@ -11,3 +12,4 @@ int main() {
     }
     assert(sizeof(ReachSpartan::aliases)/sizeof(ReachSpartan::aliases[0])==22);
 }
+

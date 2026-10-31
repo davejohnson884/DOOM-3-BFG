@@ -1,7 +1,7 @@
 // Reach-only saved player mesh aliases. No game assets or save-format changes.
 #ifndef REACH_SPARTAN_MODEL_ALIASES_H
 #define REACH_SPARTAN_MODEL_ALIASES_H
-#include <cstring>
+#include <cstddef>
 namespace ReachSpartan {
 struct Alias { const char* from; const char* to; };
 static const Alias aliases[] = {
@@ -28,12 +28,17 @@ static const Alias aliases[] = {
     {"models/md5/cinematics/revenant/revintro_player2.md5mesh", "models/reach/characters/noble_six/cinematics/revenant/revintro_player2.md5mesh"},
     {"models/md5/heads/player/player.md5mesh", "models/reach/characters/noble_six/heads/player/player.md5mesh"},
 };
+inline bool Equal(const char* a, const char* b) {
+    while (*a != 0 && *a == *b) { ++a; ++b; }
+    return *a == *b;
+}
 inline const char* Replacement(const char* canonical) {
     if (canonical == NULL) { return NULL; }
     for (const Alias& entry : aliases) {
-        if (std::strcmp(canonical, entry.from) == 0) { return entry.to; }
+        if (Equal(canonical, entry.from)) { return entry.to; }
     }
     return NULL;
 }
 }
 #endif
+
