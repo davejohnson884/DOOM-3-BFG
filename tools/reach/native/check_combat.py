@@ -50,6 +50,12 @@ def check(source):
     # player implementation: all other weapons retain the supported host path.
     original_player = subprocess.check_output(['git','show','HEAD:neo/d3xp/Player.cpp'],cwd=source,text=True)
     patched_player = (source/'neo/d3xp/Player.cpp').read_text()
+    m319_start=patched_player.index('    // The grenade slot now holds a rifle-sized launcher.')
+    m319_end=patched_player.index('        animPrefix="chaingun";\n',m319_start)+len('        animPrefix="chaingun";\n')
+    m319_block=patched_player[m319_start:m319_end]
+    assert '!common->IsMultiplayer()' in m319_block and 'GetBool("reach_m319")' in m319_block
+    patched_player=patched_player[:m319_start]+patched_player[m319_end:]
+
     camera_start=patched_player.index('        // Reach opt-in weapon projection / animation camera.')
     camera_end=patched_player.index('        // Reach animation camera end.\n',camera_start)+len('        // Reach animation camera end.\n')
     camera_insertion=patched_player[camera_start:camera_end]

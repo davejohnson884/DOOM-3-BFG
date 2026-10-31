@@ -43,7 +43,7 @@ def extend(changed,replace):
         renderEntity.shaderParms[8]=float((range/100)%10);
         renderEntity.shaderParms[9]=float((range/10)%10);
         renderEntity.shaderParms[10]=float(range%10);
-        renderEntity.shaderParms[11]=live ? 1.0f : 0.0f;
+        renderEntity.shaderParms[11]=spawnArgs.GetInt("_m319_displayUntil")>=gameLocal.time ? float(spawnArgs.GetInt("_m319_status")) : 0.0f;
     }
 ''',f)
  changed[f]=w
@@ -55,8 +55,18 @@ def extend(changed,replace):
  p=replace(p,'\tlaunchOrigin = start;\n','''    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_m319")) {
         spawnArgs.SetInt("_m319_launch",gameLocal.time);spawnArgs.SetInt("_m319_latch",ReachM319::Holding);
         spawnArgs.SetBool("_m319_bounced",false);spawnArgs.SetBool("_m319_fusePosted",false);
+        spawnArgs.SetFloat("_m319_distance",0);spawnArgs.SetVector("_m319_prev",start);
     }
 \tlaunchOrigin = start;
 ''',f)
  p=replace(p,'\t// direction of projectile\n',(root/'M319Collision.cpp').read_text()+'\t// direction of projectile\n',f)
+ changed[f]=p
+ f='neo/d3xp/Player.cpp';p=changed[f]
+ p=replace(p,'void idPlayer::UpdateWeapon()\n{\n','''void idPlayer::UpdateWeapon()
+{
+    // The grenade slot now holds a rifle-sized launcher. Use the supported
+    // two-hand host posture while retaining the original inventory slot.
+    if(!common->IsMultiplayer() && weapon.GetEntity()!=NULL && weapon.GetEntity()->spawnArgs.GetBool("reach_m319"))
+        animPrefix="chaingun";
+''',f)
  changed[f]=p;return changed
