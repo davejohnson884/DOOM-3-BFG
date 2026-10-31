@@ -422,6 +422,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed = m37_extend(changed, replace)
     from spartan_support import extend as spartan_extend
     changed = spartan_extend(changed, replace)
+    from m319_support import extend as m319_extend
+    changed = m319_extend(changed, replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
@@ -432,6 +434,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     for path in paths:
         (root/path).write_text(changed[path], encoding='utf-8', newline='\n')
     helper.write_bytes((ROOT/'WeaponProjection.h').read_bytes())
+    (root/'neo/d3xp/ReachM319Policy.h').write_bytes((ROOT/'M319Policy.h').read_bytes())
     (root/'neo/renderer/ReachSpartanModelAliases.h').write_bytes((ROOT/'SpartanModelAliases.h').read_bytes())
     (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
     (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())

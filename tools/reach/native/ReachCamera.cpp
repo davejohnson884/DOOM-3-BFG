@@ -40,7 +40,8 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     const bool m37Reload=m37 && strstr(name,"reload")!=NULL;
     const bool m37Source=m37 && spawnArgs.GetBool("reach_m37_source_camera") && (strstr(name,"fire")!=NULL || m37Reload);
     const bool m37Landing=m37 && strstr(name,"source_land_")!=NULL;
-    const bool authored=m37Source || m37Landing || shotgunAction || sprintLoop || melee || strstr(name,"throw_grenade")!=NULL;
+    const bool m319=spawnArgs.GetBool("reach_m319");
+    const bool authored=m319 || m37Source || m37Landing || shotgunAction || sprintLoop || melee || strstr(name,"throw_grenade")!=NULL;
     ReachCamera::Profile profile=ReachCamera::None;
     if( strstr(name,"reload_empty")!=NULL ) {profile=ReachCamera::ReloadEmpty;}
     else if( strstr(name,"reload")!=NULL ) {profile=ReachCamera::Reload;}
@@ -50,7 +51,7 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     else if( sprintLoop ) {profile=ReachCamera::SprintLoop;}
     else if( strstr(name,"raise")!=NULL || strstr(name,"ready")!=NULL ) {profile=ReachCamera::Raise;}
     else if( strstr(name,"putaway")!=NULL || strstr(name,"put_away")!=NULL ) {profile=ReachCamera::Lower;}
-    if(shotgunAction || m37Source) {profile=ReachCamera::None;}
+    if(shotgunAction || m37Source || m319) {profile=ReachCamera::None;}
     float gain=1;
     if( melee ) {gain=reach_cameraMeleeScale.GetFloat();}
     else if( profile==ReachCamera::Throw ) {gain=reach_cameraThrowScale.GetFloat();}
