@@ -60,7 +60,7 @@ def extend(changed,replace):
                     }
                     if(R_GetMSAASamples()>1) {
                         idList<shaderMacro_t> macros={ {"USE_GPU_SKINNING","0"} };
-                        const int pixel=renderProgManager.FindShader("reach_m319_surface_r6_msaa",SHADER_STAGE_FRAGMENT,"",macros);
+                        const int pixel=renderProgManager.FindShader("reach_m319_surface_r6_msaa",SHADER_STAGE_FRAGMENT,"",macros,false,LAYOUT_DRAW_VERT);
                         surfaceProgram=renderProgManager.FindProgram("reach_m319_surface_r6_msaa",newStage->vertexProgram,pixel,BINDING_LAYOUT_POST_PROCESS_INGAME);
                     }
                 }
