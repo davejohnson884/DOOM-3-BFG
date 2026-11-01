@@ -17,6 +17,31 @@ def extend(changed,replace):
     }
 \t// add gravity after adjusting for axis
 ''',f);changed[f]=s
+ f='neo/renderer/RenderBackend.cpp';s=changed[f]
+ s=replace(s,'\t\t\trenderLog.OpenBlock( "Standard Shader Stage", colorGreen );\n\t\t\tGL_Color( color );','''            // Reach opt-in weapon projection / linear HDR for source-based FX.
+            // GL_Color and the ordinary 3D shader both clamp to one. The
+            // existing pass-through variant preserves RGB intensity and linear
+            // coverage, exclusively for these unskinned explicit-UV materials.
+            const bool reachLinearFX = !surf->space->isGuiSurface && !surf->jointCache &&
+                pStage->texture.texgen == TG_EXPLICIT && !pStage->texture.cinematic &&
+                !idStr::Icmpn(shader->GetName(),"reach/m319/r5/",14);
+            renderLog.OpenBlock( "Standard Shader Stage", colorGreen );
+            if(reachLinearFX) {
+                color[0]=Max(0.0f,color[0]);color[1]=Max(0.0f,color[1]);color[2]=Max(0.0f,color[2]);
+                color[3]=idMath::ClampFloat(0.0f,1.0f,color[3]);
+                SetFragmentParm(RENDERPARM_COLOR,color.ToFloatPtr());
+            } else {
+                GL_Color(color);
+            }''',f)
+ anchor='\t\t\t\telse\n\t\t\t\t{\n\t\t\t\t\trenderProgManager.BindShader_TextureVertexColor();\n\t\t\t\t}\n\t\t\t}\n\n\t\t\tRB_SetVertexColorParms( svc );'
+ s=replace(s,anchor,'''                else
+                {
+                    if(reachLinearFX) renderProgManager.BindShader_TextureVertexColor_sRGB();
+                    else renderProgManager.BindShader_TextureVertexColor();
+                }
+            }
+
+            RB_SetVertexColorParms( svc );''',f);changed[f]=s
  f='neo/d3xp/Projectile.cpp';s=changed[f]
  s=replace(s,'#include "ReachM319Policy.h"','#include "ReachM319Policy.h"\n#include "Fx.h"',f)
  s=replace(s,'\t// change the model, usually to a PRT\n','''    // Reach opt-in weapon projection / compose the source mesh with particles.

@@ -36,6 +36,10 @@ def check(source):
     files = set(subprocess.check_output(['git','diff','--name-only'],cwd=source,text=True).splitlines())
     assert files == {'neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
                      'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h'}, files
+    backend=(source/'neo/renderer/RenderBackend.cpp').read_text()
+    assert '"reach/m319/r5/",14' in backend and 'const bool reachLinearFX' in backend
+    assert 'if(reachLinearFX) renderProgManager.BindShader_TextureVertexColor_sRGB();' in backend
+    assert 'SetFragmentParm(RENDERPARM_COLOR,color.ToFloatPtr());' in backend
     original_models = subprocess.check_output(['git','show','HEAD:neo/renderer/ModelManager.cpp'],cwd=source,text=True)
     patched_models = (source/'neo/renderer/ModelManager.cpp').read_text()
     patched_models = patched_models.replace('#include "ReachSpartanModelAliases.h"\n','')
@@ -81,3 +85,5 @@ if __name__ == '__main__': check(sys.argv[1])
 
 
 
+
+# M319 linear-HDR opt-in is checked inside check() above.
