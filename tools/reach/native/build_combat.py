@@ -126,8 +126,12 @@ def build(output, engine, capture, source, repair):
         for path in directory.iterdir():
             if path.is_file(): files['source/'+directory.name+'/'+path.name] = path.read_bytes()
     paths = ['neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-             'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h']
+             'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h','neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg']
     files['source/RBDoom-r15.patch'] = subprocess.check_output(['git','diff','--binary','--',*paths],cwd=source)
+    for api in ['dxil','spirv']:
+        for name in ['reach_m319_surface_r6.vs.bin','reach_m319_surface_r6.ps.bin','reach_m319_surface_r6_msaa.ps.bin']:
+            key='renderprogs2/'+api+'/'+name
+            files['reach/'+key]=(Path(source)/'base'/key).read_bytes()
     report = {'revision':'r15', 'upstream':candidate.UPSTREAM,
               'toolCommit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=REPO,text=True).strip(),
               'pose':'r12 unchanged', 'runtimeTest':'Not run in cloud; owner playtest required',

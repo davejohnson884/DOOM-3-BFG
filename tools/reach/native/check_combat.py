@@ -35,11 +35,16 @@ def check(source):
         assert 'r_reachWeaponFov' not in controls and 'g_fov' not in controls
     files = set(subprocess.check_output(['git','diff','--name-only'],cwd=source,text=True).splitlines())
     assert files == {'neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-                     'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h'}, files
+                     'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h','neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg'}, files
     backend=(source/'neo/renderer/RenderBackend.cpp').read_text()
     assert '"reach/m319/r5/",14' in backend and 'const bool reachLinearFX' in backend
     assert 'if(reachLinearFX) renderProgManager.BindShader_TextureVertexColor_sRGB();' in backend
     assert 'SetFragmentParm(RENDERPARM_COLOR,color.ToFloatPtr());' in backend
+    for name in ['Image_load.cpp','BinaryImage.cpp','NVRHI/Image_NVRHI.cpp','Image_intrinsic.cpp']:
+        assert 'Reach opt-in weapon projection' in (source/'neo/renderer'/name).read_text()
+    assert 'reachM319DepthCopied' in backend and 'copyTexture' in backend
+    assert 'reach_m319_surface_r6_msaa' in backend
+    assert 'gammaMips=false' in (source/'neo/renderer/Image_load.cpp').read_text()
     original_models = subprocess.check_output(['git','show','HEAD:neo/renderer/ModelManager.cpp'],cwd=source,text=True)
     patched_models = (source/'neo/renderer/ModelManager.cpp').read_text()
     patched_models = patched_models.replace('#include "ReachSpartanModelAliases.h"\n','')
@@ -78,7 +83,7 @@ def check(source):
     for name in ['reachMelee','reachGrenade']:
         assert re.search(r'AddCommand\( "'+name+r'", \w+, CMD_FL_GAME,',commands), 'Command must not require cheats'
     print('PASS: native/script events, event-name collision check, packaged V/G bindings, '
-          'unchanged r12 pose, non-cheat commands, twelve-file scope with opt-in visual paths, guarded saved-player mesh mapping and unchanged non-Reach player path. Actual in-game playtest still required.')
+          'unchanged r12 pose, non-cheat commands, scoped material, image and soft-depth paths, guarded saved-player mesh mapping and unchanged non-Reach player path. Actual in-game playtest still required.')
 
 
 if __name__ == '__main__': check(sys.argv[1])
