@@ -3,9 +3,26 @@
     {
         idEntity* source=owner.GetEntity();
         idPlayer* player=source!=NULL && source->IsType(idPlayer::Type) ? static_cast<idPlayer*>(source) : NULL;
-        const bool held=player!=NULL && player->health>0 && (player->usercmd.buttons&BUTTON_ATTACK)!=0 &&
+        // Test-only trigger fixture: SP developer diagnostics can hold one
+        // synthetic round without injecting OS input. Ordinary play uses the
+        // actual usercmd button exclusively.
+        const bool diagnostic=cvarSystem->GetCVarBool("developer") && cvarSystem->GetCVarBool("g_debugWeapon");
+        const int testHold=diagnostic ? spawnArgs.GetInt("_m319_test_hold","-1") : -1;
+        const bool down=testHold>=0 ? testHold!=0 : (player!=NULL && (player->usercmd.buttons&BUTTON_ATTACK)!=0);
+        const bool held=player!=NULL && player->health>0 && down &&
             player->weapon.GetEntity()!=NULL && player->weapon.GetEntity()->spawnArgs.GetBool("reach_m319");
         const int age=gameLocal.time-spawnArgs.GetInt("_m319_launch");
+        if(diagnostic) {
+            spawnArgs.SetInt("_m319_debugTicks",spawnArgs.GetInt("_m319_debugTicks")+1);
+            if(physicsObj.IsAtRest() && !spawnArgs.GetBool("_m319_debugRest")) {
+                spawnArgs.SetBool("_m319_debugRest",true);
+                gameLocal.Printf("[ReachM319] controller awake at rest age=%d ticks=%d\n",age,spawnArgs.GetInt("_m319_debugTicks"));
+            }
+        }
+        if(physicsObj.IsAtRest() && !spawnArgs.GetBool("_m319_flightStopped")) {
+            StopSound(SND_CHANNEL_BODY,false);spawnArgs.SetBool("_m319_flightStopped",true);
+        }
+
         const idVec3 previous=spawnArgs.GetVector("_m319_prev");
         const float oldDistance=spawnArgs.GetFloat("_m319_distance");
         const float travelled=oldDistance+(GetPhysics()->GetOrigin()-previous).Length();
