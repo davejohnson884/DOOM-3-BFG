@@ -82,7 +82,7 @@ def extend(changed,replace):
  launch=replace(launch,'\tphysicsObj.SetLinearVelocity( axis[ 2 ] * speed + pushVelocity );','''\tphysicsObj.SetLinearVelocity( axis[ 2 ] * speed +
         ((!common->IsMultiplayer() && spawnArgs.GetBool("reach_m319")) ? pushVelocity*.35f : pushVelocity) );''',f)
  p=p[:start]+launch+p[end:]
- start=p.index('void idProjectile::Restore(');end=p.index('void idProjectile::',start+10)
+ start=p.index('void idProjectile::Restore(');end=p.index('\n}\n',start)+3
  restored=p[start:end];at=restored.rfind('}');assert at>0
  restored=restored[:at]+'''    // Also repair an already-settled linked round loaded from a v1 save.
     if(!common->IsMultiplayer() && state==LAUNCHED && spawnArgs.GetBool("reach_m319")) BecomeActive(TH_THINK);
