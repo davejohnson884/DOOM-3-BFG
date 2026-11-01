@@ -35,7 +35,7 @@ def check(source):
         assert 'r_reachWeaponFov' not in controls and 'g_fov' not in controls
     files = set(subprocess.check_output(['git','diff','--name-only'],cwd=source,text=True).splitlines())
     assert files == {'neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-                     'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp'}, files
+                     'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h'}, files
     original_models = subprocess.check_output(['git','show','HEAD:neo/renderer/ModelManager.cpp'],cwd=source,text=True)
     patched_models = (source/'neo/renderer/ModelManager.cpp').read_text()
     patched_models = patched_models.replace('#include "ReachSpartanModelAliases.h"\n','')
@@ -74,7 +74,7 @@ def check(source):
     for name in ['reachMelee','reachGrenade']:
         assert re.search(r'AddCommand\( "'+name+r'", \w+, CMD_FL_GAME,',commands), 'Command must not require cheats'
     print('PASS: native/script events, event-name collision check, packaged V/G bindings, '
-          'unchanged r12 pose, non-cheat commands, ten-file scope, guarded saved-player mesh mapping and unchanged non-Reach player path. Actual in-game playtest still required.')
+          'unchanged r12 pose, non-cheat commands, twelve-file scope with opt-in visual paths, guarded saved-player mesh mapping and unchanged non-Reach player path. Actual in-game playtest still required.')
 
 
 if __name__ == '__main__': check(sys.argv[1])
