@@ -7,6 +7,7 @@ int main() {
  assert(Step(Holding,true,300,false)==Armed);
  assert(Step(Holding,true,40,true)==Armed);
  assert(Step(Armed,false,320,false)==Remote);
+ assert(Step(Armed,true,60000,true)==Armed);
  assert(Step(Normal,true,800,true)==Normal);
  assert(Step(Remote,true,800,true)==Remote);
  assert(FlightSpeed(0)==1450);assert(FlightSpeed(120)==1450);assert(FlightSpeed(660)==1400);assert(FlightSpeed(1200)==1350);

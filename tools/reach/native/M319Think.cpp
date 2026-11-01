@@ -1,6 +1,11 @@
     // Reach opt-in weapon projection / M319 source latch and bounce fuse.
     if(!common->IsMultiplayer() && state==LAUNCHED && spawnArgs.GetBool("reach_m319"))
     {
+        // Linked rounds have no arbitrary holding timeout. Also cancel the
+        // old v1 fizzle event on the first post-restore controller tick.
+        if(!spawnArgs.GetBool("_m319_timeoutCleared")) {
+            CancelEvents(&EV_Fizzle);spawnArgs.SetBool("_m319_timeoutCleared",true);
+        }
         idEntity* source=owner.GetEntity();
         idPlayer* player=source!=NULL && source->IsType(idPlayer::Type) ? static_cast<idPlayer*>(source) : NULL;
         // Test-only trigger fixture: SP developer diagnostics can hold one
@@ -60,5 +65,4 @@
             spawnArgs.SetBool("_m319_fusePosted",true);CancelEvents(&EV_Explode);
             PostEventMS(&EV_Explode,ReachM319::RemainingFuse(gameLocal.time,spawnArgs.GetInt("_m319_bounce")));
         }
-        if(age>=45000) {Fizzle();return;} // Lost/out-of-map projectiles cannot accumulate indefinitely.
     }
