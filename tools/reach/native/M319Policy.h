@@ -14,7 +14,7 @@ inline bool DirectImpact(bool tethered,bool actor,float speed,float incidence) {
 }
 inline float FlightSpeed(float distance) {
  const float fraction=distance<=120.0f ? 0.0f : distance>=1200.0f ? 1.0f : (distance-120.0f)/1080.0f;
- return 1500.0f-600.0f*fraction;
+ return 1450.0f-100.0f*fraction;
 }
 inline int RemainingFuse(int now,int bounce) {int d=bounce+500-now;return d>0?d:0;}
 }

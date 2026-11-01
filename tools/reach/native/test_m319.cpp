@@ -9,7 +9,7 @@ int main() {
  assert(Step(Armed,false,320,false)==Remote);
  assert(Step(Normal,true,800,true)==Normal);
  assert(Step(Remote,true,800,true)==Remote);
- assert(FlightSpeed(0)==1500);assert(FlightSpeed(120)==1500);assert(FlightSpeed(660)==1200);assert(FlightSpeed(1200)==900);
+ assert(FlightSpeed(0)==1450);assert(FlightSpeed(120)==1450);assert(FlightSpeed(660)==1400);assert(FlightSpeed(1200)==1350);
  assert(RemainingFuse(350,100)==250);
  assert(RemainingFuse(900,100)==0);
  assert(DirectImpact(false,true,1000,.2f));

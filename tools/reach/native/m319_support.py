@@ -64,6 +64,29 @@ def extend(changed,replace):
 \tlaunchOrigin = start;
 ''',f)
  p=replace(p,'\t// direction of projectile\n',(root/'M319Collision.cpp').read_text()+'\t// direction of projectile\n',f)
+ # Keep the latch controller awake independently of the rigid body.
+ start=p.index('void idProjectile::Launch(');end=p.index('void idProjectile::Think()',start)
+ launch=p[start:end]
+ launch=replace(launch,'\tstate = LAUNCHED;\n','''\tstate = LAUNCHED;
+    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_m319")) BecomeActive(TH_THINK);
+''',f)
+ launch=replace(launch,'\tphysicsObj.SetMass( mass );\n','''    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_m319")) {
+        // Small, rounded collision volume. Do not let a spinning flat cylinder
+        // launch sideways from floor seams and narrow door frames.
+        idTraceModel shape;shape.SetupDodecahedron(idBounds(idVec3(-1.4f,-1.4f,-1.4f),idVec3(1.4f,1.4f,1.4f)));
+        physicsObj.SetClipModel(new idClipModel(shape),1.0f);
+        physicsObj.GetClipModel()->SetOwner(owner.GetEntity());
+    }
+\tphysicsObj.SetMass( mass );
+''',f)
+ launch=replace(launch,'\tphysicsObj.SetLinearVelocity( axis[ 2 ] * speed + pushVelocity );','''\tphysicsObj.SetLinearVelocity( axis[ 2 ] * speed +
+        ((!common->IsMultiplayer() && spawnArgs.GetBool("reach_m319")) ? pushVelocity*.35f : pushVelocity) );''',f)
+ p=p[:start]+launch+p[end:]
+ start=p.index('void idProjectile::Restore(');end=p.index('void idProjectile::',start+10)
+ restored=p[start:end];at=restored.rfind('}');assert at>0
+ restored=restored[:at]+'''    // Also repair an already-settled linked round loaded from a v1 save.
+    if(!common->IsMultiplayer() && state==LAUNCHED && spawnArgs.GetBool("reach_m319")) BecomeActive(TH_THINK);
+'''+restored[at:];p=p[:start]+restored+p[end:]
  changed[f]=p
  f='neo/d3xp/Player.cpp';p=changed[f]
  p=replace(p,'void idPlayer::UpdateWeapon()\n{\n','''void idPlayer::UpdateWeapon()

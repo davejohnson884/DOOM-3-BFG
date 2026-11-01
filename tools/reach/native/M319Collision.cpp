@@ -12,6 +12,7 @@
             if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachM319] first bounce t=%d tether=%d impact=%d\n",gameLocal.time,tethered,impact);
         }
         // Actor impact when tapped; while tethered the round bounces off actors.
+        if(!impact) physicsObj.SetAngularVelocity(vec3_origin);
         projectileFlags.detonate_on_actor=impact;
         projectileFlags.detonate_on_world=impact;
     }
