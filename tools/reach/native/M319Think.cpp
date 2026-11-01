@@ -30,27 +30,13 @@
         }
         if(mode==ReachM319::Remote)
         {
-            spawnArgs.Set("def_splash_damage",spawnArgs.GetString("def_m319_tethered_damage","damage_reach_m319_tethered"));
-            spawnArgs.Set("model_detonate",spawnArgs.GetString("model_m319_emp","reach_m319_emp.prt"));
-            spawnArgs.Set("explode_light_color",".15 .55 1");
             if(player!=NULL && player->weapon.GetEntity()!=NULL && player->weapon.GetEntity()->spawnArgs.GetBool("reach_m319")) {
                 player->weapon.GetEntity()->spawnArgs.SetInt("_m319_status",5);
                 player->weapon.GetEntity()->spawnArgs.SetInt("_m319_displayUntil",gameLocal.time+300);
             }
-            // Shield/vehicle EMP has no universal Doom counterpart. Apply its
-            // separate source electrical damage to campaign machines only;
-            // ordinary enemies receive the source tethered blast below.
-            for(idEntity* target=gameLocal.spawnedEntities.Next();target!=NULL;target=target->spawnNode.Next()) {
-                const char* name=target->GetEntityDefName();
-                if(target==source || !target->fl.takedamage || (strstr(name,"sentry")==NULL && strstr(name,"turret")==NULL)) continue;
-                idVec3 delta=target->GetPhysics()->GetOrigin()-GetPhysics()->GetOrigin();
-                const float distance=delta.Normalize();idVec3 hit;
-                if(distance<300 && target->CanDamage(GetPhysics()->GetOrigin(),hit))
-                    target->Damage(this,source,delta,"damage_reach_m319_emp",1.0f-distance/300.0f,INVALID_JOINT);
-            }
             trace_t remote;memset(&remote,0,sizeof(remote));remote.endpos=GetPhysics()->GetOrigin();remote.endAxis=GetPhysics()->GetAxis();
             remote.c.normal=-physicsObj.GetGravityNormal();remote.c.entityNum=ENTITYNUM_WORLD;
-            if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachM319] remote EMP age=%d\n",age);
+            if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachM319] remote explosive age=%d\n",age);
             Explode(remote,NULL);return;
         }
         if(mode==ReachM319::Normal && spawnArgs.GetBool("_m319_bounced") && !spawnArgs.GetBool("_m319_fusePosted")) {
