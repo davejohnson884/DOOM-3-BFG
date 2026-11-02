@@ -21,7 +21,7 @@ def apply(root):
         raise ValueError('This patch requires the owner-tested RBDoom release commit ' + UPSTREAM)
     paths = ['neo/renderer/RenderCommon.h', 'neo/renderer/tr_frontend_addmodels.cpp',
              'neo/renderer/RenderBackend.cpp', 'neo/d3xp/Weapon.cpp', 'neo/d3xp/Weapon.h', 'neo/d3xp/Projectile.cpp',
-             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp', 'neo/d3xp/SmokeParticles.cpp', 'neo/renderer/ModelManager.cpp', 'neo/framework/DeclParticle.h', 'neo/framework/DeclParticle.cpp','neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg']
+             'neo/d3xp/gamesys/SysCmds.cpp', 'neo/d3xp/Player.cpp', 'neo/d3xp/SmokeParticles.cpp', 'neo/renderer/ModelManager.cpp', 'neo/framework/DeclParticle.h', 'neo/framework/DeclParticle.cpp','neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg','neo/renderer/Model_prt.cpp']
     original = {path: (root/path).read_text(encoding='utf-8-sig') for path in paths}
     if any(MARKER in text for text in original.values()):
         raise ValueError('Source already patched; start with a clean pinned source snapshot')

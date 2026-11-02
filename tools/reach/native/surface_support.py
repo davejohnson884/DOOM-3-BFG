@@ -1,7 +1,7 @@
 """Opt-in M319 material quality: BC7, linear mipmaps and soft scene intersections."""
 from pathlib import Path
 
-EXTRA_PATHS=['neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg']
+EXTRA_PATHS=['neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg','neo/renderer/Model_prt.cpp']
 SHADERS=['reach_m319_surface_r6.vs.hlsl','reach_m319_surface_r6.ps.hlsl','reach_m319_surface_r6_msaa.ps.hlsl','reach_m319_surface_r6_common.hlsl']
 
 def extend(changed,replace):
@@ -66,6 +66,19 @@ def extend(changed,replace):
                 }
                 renderProgManager.BindProgram(surfaceProgram);
 ''',f);changed[f]=s
+    f='neo/renderer/Model_prt.cpp';s=changed[f]
+    anchor='\t\tidRandom steppingRandom, steppingRandom2;\n'
+    s=replace(s,anchor,anchor+'''        // Reach opt-in weapon projection / decorrelate fixed-range visual groups.
+        // The stock model gives every stage the same seed, aligning independent
+        // bursts into repeated beads. Salt only this material namespace. No
+        // game RNG, count, clock, velocity law, archive or entity state changes.
+        const int reachVisualSalt=!idStr::Icmpn(stage->material->GetName(),"reach/m319/r6/",14) ?
+            (((stageNum+1)*7919)&idRandom::MAX_RAND) : 0;
+''',f)
+    anchor='^ ( int )( renderEntity->shaderParms[SHADERPARM_DIVERSITY] * idRandom::MAX_RAND ) );'
+    assert s.count(anchor)==2,f
+    s=s.replace(anchor,'^ ( int )( renderEntity->shaderParms[SHADERPARM_DIVERSITY] * idRandom::MAX_RAND ) ^ reachVisualSalt );')
+    changed[f]=s
     return changed
 
 def install(root,source):

@@ -35,7 +35,7 @@ def check(source):
         assert 'r_reachWeaponFov' not in controls and 'g_fov' not in controls
     files = set(subprocess.check_output(['git','diff','--name-only'],cwd=source,text=True).splitlines())
     assert files == {'neo/renderer/RenderCommon.h','neo/renderer/tr_frontend_addmodels.cpp',
-                     'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h','neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg'}, files
+                     'neo/renderer/RenderBackend.cpp','neo/renderer/ModelManager.cpp','neo/d3xp/Weapon.cpp','neo/d3xp/Weapon.h','neo/d3xp/Projectile.cpp','neo/d3xp/gamesys/SysCmds.cpp','neo/d3xp/Player.cpp','neo/d3xp/SmokeParticles.cpp','neo/framework/DeclParticle.cpp','neo/framework/DeclParticle.h','neo/renderer/Image_load.cpp','neo/renderer/BinaryImage.cpp','neo/renderer/NVRHI/Image_NVRHI.cpp','neo/renderer/Image_intrinsic.cpp','neo/shaders/shaders.cfg','neo/renderer/Model_prt.cpp'}, files
     backend=(source/'neo/renderer/RenderBackend.cpp').read_text()
     assert '"reach/m319/r5/",14' in backend and 'const bool reachLinearFX' in backend
     assert 'if(reachLinearFX) renderProgManager.BindShader_TextureVertexColor_sRGB();' in backend
