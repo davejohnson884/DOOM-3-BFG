@@ -438,6 +438,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     for path in paths:
         (root/path).write_text(changed[path], encoding='utf-8', newline='\n')
     helper.write_bytes((ROOT/'WeaponProjection.h').read_bytes())
+    (root/'neo/d3xp/ReachM37Handling.h').write_bytes((ROOT/'ReachM37Handling.h').read_bytes())
     (root/'neo/framework/ReachEffectMotion.h').write_bytes((ROOT/'ReachEffectMotion.h').read_bytes())
     surface_install(root,ROOT)
     (root/'neo/d3xp/ReachM319Policy.h').write_bytes((ROOT/'M319Policy.h').read_bytes())

@@ -145,6 +145,16 @@ inline Motion WalkingMotion( float phase, float strength )
     m.p[2]=.09375f*std::sin(p*2)*strength;
     return m;
 }
+inline Motion M37WalkingMotion(float phase,float strength)
+{
+    Motion m;const float p=6.28318530718f*phase;strength=Limit(strength,0,1.25f);
+    m.a[0]=.18f*std::sin(p*2)*strength;
+    m.a[1]=.04f*std::sin(p)*strength;
+    m.a[2]=.20f*std::sin(p)*strength;
+    m.p[0]=-.045f*(1-std::cos(p*2))*.5f*strength;
+    m.p[2]=.12f*std::sin(p*2)*strength;
+    return m;
+}
 struct State
 {
     Motion filtered;
@@ -160,21 +170,36 @@ struct State
         filtered=Motion();lastTime=-1;nextShot=sequence=0;lastShot=debugTime=-1;
         for( int i=0;i<4;++i ) { shotTime[i]=-100000;shotSide[i]=1; }
     }
-    Motion Walk( int now, float speed, bool active )
+    Motion Walk( int now, float speed, bool active, bool m37=false )
     {
         if( walkTime<0 || now<walkTime || now-walkTime>250 ) {walkTime=now;}
         const float elapsed=float(now-walkTime)*.001f;walkTime=now;
         if( !std::isfinite(speed) || speed<0 ) {speed=0;}
         if( !active ) {return Motion();}
-        walkPhase+=elapsed*Limit(speed,0,320)/140.0f;
+        walkPhase+=elapsed*Limit(speed,0,320)/140.0f*(m37 ? .90f : 1.0f);
         walkPhase-=std::floor(walkPhase);
-        return WalkingMotion(walkPhase,Limit(speed/140.0f,0,1.25f));
+        return m37 ? M37WalkingMotion(walkPhase,Limit(speed/140.0f,0,1.25f)) : WalkingMotion(walkPhase,Limit(speed/140.0f,0,1.25f));
     }
     void Shot( int now )
     {
         if( now==lastShot ) { return; }
         lastShot=now;shotTime[nextShot]=now;shotSide[nextShot]=(sequence++&1) ? -1 : 1;
         nextShot=(nextShot+1)%4;
+    }
+    Motion M37Shot(int now,float gain=1) const
+    {
+        Motion m;gain=Limit(gain,0,2);
+        for(int i=0;i<4;++i) {
+            const float age=float(now-shotTime[i])*.001f;
+            const float pulse=EventPulse(age,0,.010f,.115f)*gain;
+            const float settle=EventPulse(age,.10f,.155f,.245f)*gain;
+            m.a[0]-=.48f*pulse-.07f*settle;
+            m.a[1]+=.018f*float(shotSide[i])*pulse;
+            m.a[2]+=.055f*float(shotSide[i])*pulse;
+            m.p[0]-=.095f*pulse;
+            m.p[2]+=.020f*pulse;
+        }
+        return m;
     }
     Motion Evaluate( int now, const Motion& target, float shotScale=1, bool heavyShot=false )
     {

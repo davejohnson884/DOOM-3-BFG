@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef REACH_WEAPON_ACTIONS_H
 #define REACH_WEAPON_ACTIONS_H
+#include "ReachM37Handling.h"
 namespace ReachActions {
 // Immediate first shot; only the following interval ramps. After300ms retain
 // the accepted full interval exactly, including its fixed-tick-safe .066 value.

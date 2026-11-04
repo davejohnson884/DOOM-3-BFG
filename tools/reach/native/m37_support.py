@@ -62,4 +62,19 @@ def extend(changed,replace):
     }
 '''
  launch=replace(launch,anchor,ramp+anchor,f);w=w[:start]+launch+w[end:]
+ # M37 handling hooks are guarded at the native boundary. Shared scripts and
+ # every other port retain their existing code paths and serialized layout.
+ w=replace(w,'void idWeapon::Event_ReachQuickAction()\n{\n',
+     'void idWeapon::Event_ReachQuickAction()\n{\n    ReachM37Handling();\n',f)
+ start=w.index('void idWeapon::Event_LaunchProjectiles( ')
+ end=w.index('void idWeapon::Event_LaunchProjectilesEllipse(',start)
+ launch=w[start:end]
+ launch=replace(launch,'\tGetProjectileLaunchOriginAndAxis( muzzleOrigin, muzzleAxis );\n',
+     '\tGetProjectileLaunchOriginAndAxis( muzzleOrigin, muzzleAxis );\n    spread=ReachM37Spread(spread);\n',f)
+ launch=replace(launch,anchor,'    ReachM37Recoil();\n'+anchor,f)
+ w=w[:start]+launch+w[end:]
+ w+='\n'+( __import__('pathlib').Path(__file__).resolve().parent/'M37Handling.cpp').read_text()
+ h='neo/d3xp/Weapon.h'
+ changed[h]=replace(changed[h],'bool ReachCameraMotion( idVec3& offset, idAngles& angles );',
+     'bool ReachCameraMotion( idVec3& offset, idAngles& angles );\n    void ReachM37Handling();\n    float ReachM37Spread(float original);\n    void ReachM37Recoil();',h)
  changed[f]=w;return changed
