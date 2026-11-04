@@ -186,21 +186,6 @@ struct State
         lastShot=now;shotTime[nextShot]=now;shotSide[nextShot]=(sequence++&1) ? -1 : 1;
         nextShot=(nextShot+1)%4;
     }
-    Motion M37Shot(int now,float gain=1) const
-    {
-        Motion m;gain=Limit(gain,0,2);
-        for(int i=0;i<4;++i) {
-            const float age=float(now-shotTime[i])*.001f;
-            const float pulse=EventPulse(age,0,.010f,.115f)*gain;
-            const float settle=EventPulse(age,.10f,.155f,.245f)*gain;
-            m.a[0]-=.48f*pulse-.07f*settle;
-            m.a[1]+=.018f*float(shotSide[i])*pulse;
-            m.a[2]+=.055f*float(shotSide[i])*pulse;
-            m.p[0]-=.095f*pulse;
-            m.p[2]+=.020f*pulse;
-        }
-        return m;
-    }
     Motion Evaluate( int now, const Motion& target, float shotScale=1, bool heavyShot=false )
     {
         if( lastTime>=0 && now<lastTime ) { Reset(); }

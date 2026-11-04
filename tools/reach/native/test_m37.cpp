@@ -31,24 +31,24 @@ int main() {
         if(step==8) {reference=motion;} else {assert(std::fabs(motion-reference)<.00001f);}
         assert(motion>.33f && motion<.35f);
     }
-    // Continuous LMG fire stays bounded, distinct from the pump-shotgun kick,
+    // The restored automatic shoulder response stays strong and bounded,
     // then clears completely without a held recovery frame or aim mutation.
     for(int step:{8,16,32}) {
         ReachCamera::State state;int shot=0;float peak=0;
         for(int now=0;now<10000;now+=step) {
             if(now<6000 && now>=shot*66) {state.Shot(now);++shot;}
-            ReachCamera::Motion neutral;const auto base=state.Evaluate(now,neutral,0,false);
-            for(int i=0;i<3;++i) {assert(base.a[i]==0 && base.p[i]==0);}
-            const auto m=state.M37Shot(now);const auto duplicate=state.M37Shot(now);
+            ReachCamera::Motion neutral;
+            const auto m=state.Evaluate(now,neutral,2.2f,true);
+            const auto duplicate=state.Evaluate(now,neutral,2.2f,true);
             for(int i=0;i<3;++i) {
                 assert(m.a[i]==duplicate.a[i] && m.p[i]==duplicate.p[i]);
-                assert(std::isfinite(m.a[i]) && std::fabs(m.a[i])<1);
-                assert(std::fabs(m.p[i])<.25f);
+                assert(std::isfinite(m.a[i]) && std::fabs(m.a[i])<=6);
+                assert(std::fabs(m.p[i])<=2);
                 if(now>6300) {assert(m.a[i]==0 && m.p[i]==0);}
             }
             peak=std::fmax(peak,-m.a[0]);
         }
-        assert(peak>.35f && peak<.7f);
+        assert(peak>4 && peak<=6);
     }
     std::puts("PASS M37 bloom, stance, motion settling, recoil control, sustained camera bounds and full recovery");
 }

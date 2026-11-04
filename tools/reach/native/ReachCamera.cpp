@@ -39,11 +39,13 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     const bool m37=idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_m37")==0;
     const bool m37Handling=m37 && spawnArgs.GetBool("reach_m37_handling",
         weaponDef!=NULL ? weaponDef->dict.GetString("reach_m37_handling","1") : "1");
+    const float m37FireGain=m37Handling ? ReachCamera::Limit(spawnArgs.GetFloat("reach_m37_camera_fire_gain",
+        weaponDef!=NULL ? weaponDef->dict.GetString("reach_m37_camera_fire_gain","1") : "1"),0,2) : 1;
     const bool m37Reload=m37 && strstr(name,"reload")!=NULL;
     const bool m37Source=m37 && spawnArgs.GetBool("reach_m37_source_camera") && (strstr(name,"fire")!=NULL || m37Reload);
     const bool m37Landing=m37 && strstr(name,"source_land_")!=NULL;
     const bool m319=spawnArgs.GetBool("reach_m319");
-    const bool authored=m319 || (m37Source && (!m37Handling || m37Reload)) || m37Landing || shotgunAction || sprintLoop || melee || strstr(name,"throw_grenade")!=NULL;
+    const bool authored=m319 || m37Source || m37Landing || shotgunAction || sprintLoop || melee || strstr(name,"throw_grenade")!=NULL;
     ReachCamera::Profile profile=ReachCamera::None;
     if( strstr(name,"reload_empty")!=NULL ) {profile=ReachCamera::ReloadEmpty;}
     else if( strstr(name,"reload")!=NULL ) {profile=ReachCamera::Reload;}
@@ -59,7 +61,9 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     else if( profile==ReachCamera::Throw ) {gain=reach_cameraThrowScale.GetFloat();}
     else if( m37Reload || profile==ReachCamera::Reload || profile==ReachCamera::ReloadEmpty ) {gain=reach_cameraReloadScale.GetFloat();}
     else if( profile==ReachCamera::SprintEnter || profile==ReachCamera::SprintLoop || profile==ReachCamera::SprintExit ) {gain=reach_cameraSprintScale.GetFloat();}
-    // All accepted gains remain unchanged; only the throw gets its new profile.
+    if(m37Source && !m37Reload) {gain*=m37FireGain;}
+    // Restore the authored M37 fire camera and its established shoulder vibration.
+    // The independent LMG aim/accuracy/movement rules remain unchanged.
     ReachCamera::Motion target=ReachCamera::ScaleMotion(ReachCamera::ProfileMotion(profile,phase),gain);
     if(m37Reload)
     {
@@ -124,14 +128,8 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     const ReachCamera::Motion stride=ReachCamera::ScaleMotion(reachCamera.Walk(now,walkingSpeed,walking,m37Handling),reach_cameraWalkScale.GetFloat()*walkGain);
     for(int i=0;i<3;++i) {target.p[i]+=stride.p[i];target.a[i]+=stride.a[i];}
     const bool magnum=idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_magnum")==0;
-    const float shotGain=reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1")*(magnum ? 1.18f : 1.0f);
-    ReachCamera::Motion motion=reachCamera.Evaluate(now,target,m37Handling ? 0 : shotGain,shotgun || (m37Source && !m37Handling));
-    if(m37Handling) {
-        const float gain=spawnArgs.GetFloat("reach_m37_camera_fire_gain",
-            weaponDef!=NULL ? weaponDef->dict.GetString("reach_m37_camera_fire_gain","1") : "1");
-        const ReachCamera::Motion kick=reachCamera.M37Shot(now,gain*reach_cameraFireScale.GetFloat()/2.2f);
-        for(int i=0;i<3;++i) {motion.p[i]+=kick.p[i];motion.a[i]+=kick.a[i];}
-    }
+    const float shotGain=reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1")*(magnum ? 1.18f : 1.0f)*m37FireGain;
+    const ReachCamera::Motion motion=reachCamera.Evaluate(now,target,shotGain,shotgun || m37Source);
     for( int i=0;i<3;++i ) {offset[i]=motion.p[i];angles[i]=motion.a[i];}
     if( cvarSystem->GetCVarBool("reach_cameraDebug") && reachCamera.debugTime!=now )
     {
