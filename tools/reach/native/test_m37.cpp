@@ -37,6 +37,8 @@ int main() {
         ReachCamera::State state;int shot=0;float peak=0;
         for(int now=0;now<10000;now+=step) {
             if(now<6000 && now>=shot*66) {state.Shot(now);++shot;}
+            ReachCamera::Motion neutral;const auto base=state.Evaluate(now,neutral,0,false);
+            for(int i=0;i<3;++i) {assert(base.a[i]==0 && base.p[i]==0);}
             const auto m=state.M37Shot(now);const auto duplicate=state.M37Shot(now);
             for(int i=0;i<3;++i) {
                 assert(m.a[i]==duplicate.a[i] && m.p[i]==duplicate.p[i]);

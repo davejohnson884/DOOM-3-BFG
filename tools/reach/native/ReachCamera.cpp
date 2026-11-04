@@ -125,7 +125,7 @@ bool idWeapon::ReachCameraMotion( idVec3& offset, idAngles& angles )
     for(int i=0;i<3;++i) {target.p[i]+=stride.p[i];target.a[i]+=stride.a[i];}
     const bool magnum=idStr::Cmp(spawnArgs.GetString("model_view"),"viewmodel_reach_magnum")==0;
     const float shotGain=reach_cameraFireScale.GetFloat()*spawnArgs.GetFloat("reach_camera_fire_gain","1")*(magnum ? 1.18f : 1.0f);
-    ReachCamera::Motion motion=reachCamera.Evaluate(now,target,m37Handling ? 0 : shotGain,shotgun || m37Source);
+    ReachCamera::Motion motion=reachCamera.Evaluate(now,target,m37Handling ? 0 : shotGain,shotgun || (m37Source && !m37Handling));
     if(m37Handling) {
         const float gain=spawnArgs.GetFloat("reach_m37_camera_fire_gain",
             weaponDef!=NULL ? weaponDef->dict.GetString("reach_m37_camera_fire_gain","1") : "1");
