@@ -10,12 +10,18 @@ def extend(changed,replace):
  w=replace(w,'\tassert( modelname );\n','\tassert( modelname );\n    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_rocket") && idStr::Cmp(modelname,"viewmodel_reach_ar_present")==0) modelname="viewmodel_reach_rocket_present";\n',f)
  w=replace(w,'\tammoClip = ammoinclip;\n','''    // Legacy inventory clips may hold five. Return only the excess to the
     // separate reserve before adopting the two-tube capacity. No free rounds.
-    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_rocket") && ammoinclip>clipSize) {
+    if(!common->IsMultiplayer() && weaponDef->dict.GetBool("reach_rocket") && ammoinclip>clipSize) {
         const int reserve=owner->inventory.GetInventoryAmmoForType(ammoType);
         if(reserve>=0) owner->inventory.SetInventoryAmmoForType(ammoType,reserve+ammoinclip-clipSize);
         ammoinclip=clipSize;
     }
 \tammoClip = ammoinclip;
+''',f)
+ w=replace(w,'\tspawnArgs = weaponDef->dict;\n','''\tspawnArgs = weaponDef->dict;
+    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_rocket") && owner!=NULL) {
+        const bool half=owner->spawnArgs.GetBool("_reach_rocketHalf",ammoClip.Get()==1 ? "1" : "0");
+        spawnArgs.SetBool("_rocket_half",half);owner->spawnArgs.SetBool("_reach_rocketHalf",half);
+    }
 ''',f)
  w=replace(w,'void idWeapon::PresentWeapon( bool showViewModel )\n{\n','''void idWeapon::PresentWeapon( bool showViewModel )
 {
@@ -25,6 +31,15 @@ def extend(changed,replace):
         const int loaded=ammoClip.Get();GetWeaponDef("weapon_rocketlauncher",loaded);
         gameLocal.Printf("[ReachRocket] legacy launcher migrated; loaded=%d reserve=%d\\n",ammoClip.Get(),owner->inventory.HasAmmo(ammoType,1));
     }
+    if(!common->IsMultiplayer() && owner!=NULL && spawnArgs.GetBool("reach_rocket")) {
+        const idAnimBlend* a=animator.CurrentAnim(ANIMCHANNEL_ALL);
+        if(a!=NULL && strstr(a->AnimFullName(),"reload")!=NULL && a->AnimTime(gameLocal.time)>=1834) {
+            // The source tubes finish their withdrawn rotation at frame55.
+            // Persist this independently of ammo so interrupted reloads and
+            // holstering cannot select a mismatched next firing animation.
+            spawnArgs.SetBool("_rocket_half",false);owner->spawnArgs.SetBool("_reach_rocketHalf",false);
+        }
+    }
 ''',f)
  for method in ['PlayAnim','PlayCycle']:
   anchor='void idWeapon::Event_'+method+'( int channel, const char* animname )\n{\n'
@@ -32,7 +47,10 @@ def extend(changed,replace):
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_rocket") && channel==ANIMCHANNEL_ALL) {
         const bool fire=idStr::Cmp(animname,"fire")==0;
         if(fire) {
-            rocketAnimation=ammoClip.Get()==1 ? "fire_a" : "fire_b";
+            const bool half=spawnArgs.GetBool("_rocket_half");
+            rocketAnimation=half ? "fire_b" : "fire_a";
+            spawnArgs.SetBool("_rocket_half",!half);
+            if(owner!=NULL) owner->spawnArgs.SetBool("_reach_rocketHalf",!half);
             const char* effect=spawnArgs.GetString("smoke_reach_backwash");
             const jointHandle_t joint=animator.GetJointHandle("backwash");
             if(effect[0] && joint!=INVALID_JOINT && gameLocal.isNewFrame) {
@@ -44,7 +62,6 @@ def extend(changed,replace):
                     origin=playerViewOrigin+(delta*playerViewAxis[0])*playerViewAxis[0]+
                         scale*((delta*playerViewAxis[1])*playerViewAxis[1]+(delta*playerViewAxis[2])*playerViewAxis[2]);
                 }
-                axis[0]=-axis[0];axis[2]=-axis[2];
                 const idDeclParticle* particle=static_cast<const idDeclParticle*>(declManager->FindType(DECL_PARTICLE,effect));
                 gameLocal.smokeParticles->EmitSmoke(particle,gameLocal.time,gameLocal.random.RandomFloat(),origin,axis,timeGroup);
             }
@@ -52,7 +69,7 @@ def extend(changed,replace):
         else {
             rocketAnimation=idStr::Cmp(animname,"melee")==0 ?
                 (spawnArgs.GetInt("_rocket_meleeVariant")==2 ? "melee2" : "melee1") : animname;
-            if(ammoClip.Get()==1) rocketAnimation+="_half";
+            if(spawnArgs.GetBool("_rocket_half")) rocketAnimation+="_half";
         }
         if(animator.GetAnim(rocketAnimation.c_str())!=0) animname=rocketAnimation.c_str();
         if(strstr(animname,"reload")!=NULL) spawnArgs.SetFloat("reach_reload_fill_time",80.0f/30);
