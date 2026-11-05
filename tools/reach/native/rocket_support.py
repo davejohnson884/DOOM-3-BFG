@@ -31,7 +31,24 @@ def extend(changed,replace):
   code='''    idStr rocketAnimation;
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_rocket") && channel==ANIMCHANNEL_ALL) {
         const bool fire=idStr::Cmp(animname,"fire")==0;
-        if(fire) rocketAnimation=ammoClip.Get()==1 ? "fire_a" : "fire_b";
+        if(fire) {
+            rocketAnimation=ammoClip.Get()==1 ? "fire_a" : "fire_b";
+            const char* effect=spawnArgs.GetString("smoke_reach_backwash");
+            const jointHandle_t joint=animator.GetJointHandle("backwash");
+            if(effect[0] && joint!=INVALID_JOINT && gameLocal.isNewFrame) {
+                idVec3 origin;idMat3 axis;GetGlobalJointTransform(true,joint,origin,axis);
+                const renderView_t* view=owner!=NULL ? owner->GetRenderView() : NULL;
+                if(view!=NULL) {
+                    const float scale=ReachMuzzle::WorldSmokeScale(cvarSystem->GetCVarFloat("r_reachWeaponFov"),view->fov_y);
+                    const idVec3 delta=origin-playerViewOrigin;
+                    origin=playerViewOrigin+(delta*playerViewAxis[0])*playerViewAxis[0]+
+                        scale*((delta*playerViewAxis[1])*playerViewAxis[1]+(delta*playerViewAxis[2])*playerViewAxis[2]);
+                }
+                axis[0]=-axis[0];axis[2]=-axis[2];
+                const idDeclParticle* particle=static_cast<const idDeclParticle*>(declManager->FindType(DECL_PARTICLE,effect));
+                gameLocal.smokeParticles->EmitSmoke(particle,gameLocal.time,gameLocal.random.RandomFloat(),origin,axis,timeGroup);
+            }
+        }
         else {
             rocketAnimation=idStr::Cmp(animname,"melee")==0 ?
                 (spawnArgs.GetInt("_rocket_meleeVariant")==2 ? "melee2" : "melee1") : animname;
@@ -109,4 +126,3 @@ def extend(changed,replace):
    replacement='('+expr+' || '+expr.replace('reach/m319/r6/",14','reach/rocket/fx/",16')+')'
   assert expr in s;s=s.replace(expr,replacement);changed[f]=s
  return changed
-
