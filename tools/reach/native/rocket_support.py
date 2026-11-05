@@ -11,7 +11,9 @@ def extend(changed,replace):
  w=replace(w,'\tammoClip = ammoinclip;\n','''    // Legacy inventory clips may hold five. Return only the excess to the
     // separate reserve before adopting the two-tube capacity. No free rounds.
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_rocket") && ammoinclip>clipSize) {
-        owner->inventory.ammo[ammoType]+=ammoinclip-clipSize;ammoinclip=clipSize;
+        const int reserve=owner->inventory.GetInventoryAmmoForType(ammoType);
+        if(reserve>=0) owner->inventory.SetInventoryAmmoForType(ammoType,reserve+ammoinclip-clipSize);
+        ammoinclip=clipSize;
     }
 \tammoClip = ammoinclip;
 ''',f)
@@ -107,3 +109,4 @@ def extend(changed,replace):
    replacement='('+expr+' || '+expr.replace('reach/m319/r6/",14','reach/rocket/fx/",16')+')'
   assert expr in s;s=s.replace(expr,replacement);changed[f]=s
  return changed
+
