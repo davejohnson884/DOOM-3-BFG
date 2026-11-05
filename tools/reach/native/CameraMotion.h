@@ -54,6 +54,24 @@ inline Motion ReloadMotion( bool empty, float phase )
     m.a[2]=-.160f*hold-.420f*out+.560f*in+.140f*seat+.300f*bolt-.100f*boltSettle;
     return m;
 }
+inline Motion RocketReloadMotion(float seconds) {
+    Motion m;
+    // Source tube withdrawal begins at frame30, clears the body at45,
+    // re-enters at60. The push-bar/round seating event is at80.
+    const float hold=Bell(seconds/(115.0f/30),.38f);
+    const float unlock=EventPulse(seconds,.40f,.67f,.96f);
+    const float withdraw=EventPulse(seconds,.94f,1.40f,1.83f);
+    const float insert=EventPulse(seconds,1.83f,2.06f,2.39f);
+    const float seat=EventPulse(seconds,2.46f,2.67f,2.92f);
+    const float shoulder=EventPulse(seconds,2.94f,3.16f,3.57f);
+    m.a[0]=.18f*hold+.46f*unlock+.72f*withdraw-.92f*insert-.68f*seat+.26f*shoulder;
+    m.a[1]=.06f*hold+.13f*withdraw-.17f*insert+.07f*seat;
+    m.a[2]=-.18f*hold-.32f*unlock-.52f*withdraw+.66f*insert+.42f*seat-.18f*shoulder;
+    m.p[0]=-.05f*hold-.06f*unlock-.12f*withdraw+.13f*insert+.08f*seat;
+    m.p[1]=.03f*withdraw-.04f*insert;
+    m.p[2]=-.03f*withdraw+.05f*insert+.035f*seat;
+    return m;
+}
 inline Motion M37ReloadMotion( bool empty, float seconds )
 {
     Motion m;

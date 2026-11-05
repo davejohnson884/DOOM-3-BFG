@@ -428,6 +428,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed = effects_extend(changed, replace)
     from surface_support import extend as surface_extend,install as surface_install
     changed=surface_extend(changed,replace)
+    from rocket_support import extend as rocket_extend
+    changed=rocket_extend(changed,replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:

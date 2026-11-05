@@ -88,6 +88,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & build/test_m37.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test rocket reload camera continuity and projection
+        shell: pwsh
+        run: |
+          cl /nologo /std:c++17 /EHsc /W4 /WX /O2 tools/reach/native/test_rocket.cpp /Fe:build/test_rocket.exe /Fo:build/test_rocket.obj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & build/test_rocket.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Apply extension to the exact published source
         shell: pwsh
         run: python tools/reach/native/apply_rbdoom.py rbdoom
