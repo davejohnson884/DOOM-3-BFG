@@ -32,6 +32,10 @@ def extend(changed,replace):
         gameLocal.Printf("[ReachRocket] legacy launcher migrated; loaded=%d reserve=%d\\n",ammoClip.Get(),owner->inventory.HasAmmo(ammoType,1));
     }
     if(!common->IsMultiplayer() && owner!=NULL && spawnArgs.GetBool("reach_rocket")) {
+        if(idStr::Cmp(state.c_str(),"Idle")==0 && ammoClip.Get()==0 &&
+           owner->inventory.HasAmmo(ammoType,ammoRequired)>0 &&
+           session->GetActingGameStateLobbyBase().GetLobbyUserWeaponAutoReload(gameLocal.lobbyUserIDs[owner->entityNumber]))
+            WEAPON_RELOAD=true;
         const idAnimBlend* a=animator.CurrentAnim(ANIMCHANNEL_ALL);
         if(a!=NULL && strstr(a->AnimFullName(),"reload")!=NULL && a->AnimTime(gameLocal.time)>=1834) {
             // The source tubes finish their withdrawn rotation at frame55.
