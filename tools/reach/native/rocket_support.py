@@ -146,4 +146,5 @@ def extend(changed,replace):
    expr='!idStr::Icmpn('+('shader->GetName()' if f.endswith('RenderBackend.cpp') else 'stage->material->GetName()')+',"reach/m319/r6/",14)'
    replacement='('+expr+' || '+expr.replace('reach/m319/r6/",14','reach/rocket/fx/",16')+')'
   assert expr in s;s=s.replace(expr,replacement);changed[f]=s
- return changed
+ from rocket_flight_support import extend as flight_extend
+ return flight_extend(changed,replace)
