@@ -147,4 +147,6 @@ def extend(changed,replace):
    replacement='('+expr+' || '+expr.replace('reach/m319/r6/",14','reach/rocket/fx/",16')+')'
   assert expr in s;s=s.replace(expr,replacement);changed[f]=s
  from rocket_flight_support import extend as flight_extend
- return flight_extend(changed,replace)
+ changed=flight_extend(changed,replace)
+ from blast_decal_support import extend as decal_extend
+ return decal_extend(changed,replace)

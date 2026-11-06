@@ -2,7 +2,7 @@
 def extend(changed,replace):
  f='neo/d3xp/Player.cpp';s=changed[f]
  anchor='\t\torigin = viewOrigin + gunpos * viewAxis;\n'
- s=replace(s,anchor,'\t\tgunpos += reachMotionWeapon->spawnArgs.GetVector("reach_view_offset", reachMotionWeapon->spawnArgs.GetBool("reach_rocket") ? "-4 0 -1" : "0 0 0");\n'+anchor,f);changed[f]=s
+ s=replace(s,anchor,'\t\tgunpos += reachMotionWeapon->spawnArgs.GetVector("reach_view_offset", reachMotionWeapon->spawnArgs.GetBool("reach_rocket") ? "3 0 -1" : "0 0 0");\n'+anchor,f);changed[f]=s
  f='neo/d3xp/Projectile.cpp';s=changed[f]
  # Use a unique light ID to keep the rocket shell from shadowing its motor
  # light. Environmental geometry still casts shadows normally.
