@@ -1,5 +1,9 @@
 """Reach-only surface-traced detonation marks; retain existing explosion FX."""
 def extend(changed,replace):
+ f='neo/d3xp/Player.cpp';s=changed[f]
+ old='\t\tgunpos += reachMotionWeapon->spawnArgs.GetVector("reach_view_offset", reachMotionWeapon->spawnArgs.GetBool("reach_rocket") ? "3 0 -1" : "0 0 0");\n'
+ new='        const idDict* reachViewDefinition=reachMotionWeapon->spawnArgs.GetBool("reach_rocket") ? gameLocal.FindEntityDefDict("weapon_rocketlauncher",false) : NULL;\n        const idDict& reachViewSettings=reachViewDefinition!=NULL ? *reachViewDefinition : reachMotionWeapon->spawnArgs;\n        gunpos += reachViewSettings.GetVector("reach_view_offset",reachMotionWeapon->spawnArgs.GetBool("reach_rocket") ? "3 0 -1" : "0 0 0");\n'
+ changed[f]=replace(s,old,new,f)
  f='neo/d3xp/Projectile.cpp';s=changed[f]
  # Old saved projectile dictionaries may lack the new decal keys. Resolve
  # authored presentation from the current definition, without changing saves.
