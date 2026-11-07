@@ -45,6 +45,23 @@ def extend(changed,replace):
  anchor='int\tidWeapon::GetZoomFov()\n{\n';w=replace(w,anchor,anchor+'''    if(!common->IsMultiplayer() && owner!=NULL && spawnArgs.GetBool("reach_needle_rifle"))
         return idMath::Ftoi(RAD2DEG(2*idMath::ATan(idMath::Tan(DEG2RAD(owner->DefaultFov()*.5f))/2.0f)));
 ''',f)
+ # Original single-wield barrel-error functions. Unlike the shared AR bloom,
+ # these add a nonlinear shot penalty and recover over .9 seconds.
+ anchor='    spread=ReachM37Spread(spread);\n'
+ w=replace(w,anchor,anchor+'''    if(!common->IsMultiplayer() && owner!=NULL && spawnArgs.GetBool("reach_needle_rifle")) {
+        const int previous=spawnArgs.GetInt("_nr_lastShot","-1");
+        float error=spawnArgs.GetFloat("_nr_error");
+        if(previous>=0 && gameLocal.time>=previous) error-=float(gameLocal.time-previous)/900.0f;
+        error=idMath::ClampFloat(0,1,error);
+        spread=(.15f+1.85f*error)/((owner->usercmd.buttons&BUTTON_ZOOM) ? 2.0f : 1.0f);
+        const float penalty=owner->AI_CROUCH ?
+            (error<.2f ? 2.0f*error+.35f : -.6875f*error+.8875f) :
+            (error<.15f ? 3.3333333f*error+.35f : -.7647059f*error+.9647059f);
+        spawnArgs.SetFloat("_nr_error",idMath::ClampFloat(0,1,error+penalty));
+        spawnArgs.SetInt("_nr_lastShot",gameLocal.time);
+        if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachNeedle] SHOT time=%d error=%.5f spread=%.5f\\n",gameLocal.time,error,spread);
+    }
+''',f)
  changed[f]=w
  f='neo/d3xp/Projectile.cpp';p=changed[f]
  anchor='void idProjectile::Think()\n{\n';p=replace(p,anchor,anchor+'''    // Reach opt-in weapon projection / attached crystal lifecycle. Bind state,
