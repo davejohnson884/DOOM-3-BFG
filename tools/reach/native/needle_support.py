@@ -92,7 +92,37 @@ def extend(changed,replace):
  # and campaign Killed callbacks. Attach only after that path has run.
  start=p.index('bool idProjectile::Collide(');end=p.index('void idProjectile::AddDefaultDamageEffect',start)
  body=p[start:end];anchor='\tExplode( collision, ignore );\n'
+ body=replace(body,'\tdamageDefName = spawnArgs.GetString( \"def_damage\" );\n','''\tdamageDefName = spawnArgs.GetString( "def_damage" );
+    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_needle_shard")) {
+        idEntity* damagedActor=ent;
+        if(ent->IsType(idAFAttachment::Type)) damagedActor=static_cast<idAFAttachment*>(ent)->GetBody();
+        idActor* actor=damagedActor!=NULL && damagedActor->IsType(idActor::Type) ? static_cast<idActor*>(damagedActor) : NULL;
+        if(actor!=NULL) {
+            const jointHandle_t location=CLIPMODEL_ID_TO_JOINT_HANDLE(collision.c.id);
+            const bool head=actor->GetHeadEntity()==ent || idStr::Icmp(actor->GetDamageGroup(location),"head")==0;
+            if(head) damageDefName=spawnArgs.GetString("def_headshot",damageDefName);
+        }
+    }
+''',f)
  body=replace(body,anchor,'''    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_needle_shard")) {
+        // A near-instant source shard still leaves a brief optical trace. This
+        // visual-only beam uses ordinary entity/removal-event save support.
+        const idDeclEntityDef* traceDef=gameLocal.FindEntityDef("reach_needle_contrail",false);
+        if(traceDef!=NULL && (collision.endpos-launchOrigin).LengthSqr()>4) {
+            idDict args=traceDef->dict;args.SetVector("origin",launchOrigin);
+            idEntity* beam=NULL;
+            if(gameLocal.SpawnEntityDef(args,&beam,false) && beam!=NULL) {
+                renderEntity_t* re=beam->GetRenderEntity();
+                re->customShader=declManager->FindMaterial("reach/needle_rifle/contrail");
+                re->shaderParms[SHADERPARM_BEAM_END_X]=collision.endpos.x;
+                re->shaderParms[SHADERPARM_BEAM_END_Y]=collision.endpos.y;
+                re->shaderParms[SHADERPARM_BEAM_END_Z]=collision.endpos.z;
+                re->shaderParms[SHADERPARM_BEAM_WIDTH]=.42f;
+                re->shaderParms[SHADERPARM_TIMEOFFSET]=-MS2SEC(gameLocal.time);
+                re->noShadow=true;re->noSelfShadow=true;
+                beam->UpdateVisuals();beam->PostEventMS(&EV_Remove,90);
+            }
+        }
         idEntity* target=ent;
         if(ent->IsType(idAFAttachment::Type)) target=static_cast<idAFAttachment*>(ent)->GetBody();
         CancelEvents(&EV_Fizzle);CancelEvents(&EV_Explode);
