@@ -182,13 +182,15 @@ def extend(changed,replace):
         idEntityPtr<idEntity> targetId;targetId=target;spawnArgs.SetInt("_nr_target",targetId.GetSpawnId());
         smokeFly=NULL;smokeFlyTime=0;StartSound("snd_attach",SND_CHANNEL_BODY,0,false,NULL);
         BecomeActive(TH_THINK);physicsObj.PutToRest();
-        if(target!=NULL && target->IsType(idActor::Type) && target->fl.takedamage && target->health>0 && target->health<nrHealthBefore) {
+        const bool canCombine=target!=NULL && target->IsType(idActor::Type) && target->fl.takedamage && target->health>0 && target->health<nrHealthBefore;
+        spawnArgs.SetBool("_nr_canCombine",canCombine);
+        if(canCombine) {
             int count=0;
             for(idEntity* e=gameLocal.spawnedEntities.Next();e!=NULL;e=e->spawnNode.Next()) {
                 if(!e->IsType(idProjectile::Type)) continue;
                 idProjectile* needle=static_cast<idProjectile*>(e);
                 if(needle->state==LAUNCHED && needle->owner.GetEntity()==owner.GetEntity() && needle->spawnArgs.GetBool("reach_needle_shard") &&
-                   needle->spawnArgs.GetBool("_nr_attached") && needle->spawnArgs.GetInt("_nr_target")==targetId.GetSpawnId() &&
+                   needle->spawnArgs.GetBool("_nr_attached") && needle->spawnArgs.GetBool("_nr_canCombine","1") && needle->spawnArgs.GetInt("_nr_target")==targetId.GetSpawnId() &&
                    needle->spawnArgs.GetInt("_nr_expireAt")>gameLocal.time && needle->spawnArgs.GetInt("_nr_superAt")==0) ++count;
             }
             if(count>=spawnArgs.GetInt("reach_combine_count","5")) {
