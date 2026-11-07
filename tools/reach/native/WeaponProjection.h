@@ -26,7 +26,9 @@ inline bool Eligible( const char* model, bool tagged, bool depthHack,
 	{
 		return false;
 	}
-	return ModelNamed( model, "models/md5/weapons/reach_ar/view.md5mesh" ) ||
+	return ModelNamed( model, "models/md5/weapons/reach_needle_rifle/view.md5mesh" ) ||
+        ModelNamed( model, "reach_needle_rifle_flash.prt" ) ||
+        ModelNamed( model, "models/md5/weapons/reach_ar/view.md5mesh" ) ||
 		ModelNamed( model, "models/md5/weapons/reach_ar/view_appearance_r15.md5mesh" ) ||
         ModelNamed( model, "models/md5/weapons/reach_magnum/view.md5mesh" ) ||
         ModelNamed( model, "reach_magnum_flash.prt" ) ||
