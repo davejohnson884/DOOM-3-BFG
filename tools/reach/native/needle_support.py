@@ -28,11 +28,44 @@ def extend(changed,replace):
                 spawnArgs.SetBool("_nr_zoomDown",zoomDown);
             }
         }
-        // These material parameters are private to the Needle Rifle. Source
-        // ammo-function frames control the visible bank independently of recoil.
-        const float remaining=idMath::ClampFloat(0,1,float(ammoClip.Get())/21.0f);
-        renderEntity.shaderParms[8]=remaining*13.0f;
-        if(worldModel.GetEntity()!=NULL) worldModel.GetEntity()->SetShaderParm(8,remaining*13.0f);
+        // Source replacement animation includes both orientation and scale.
+        // Deform actual joints; an inactive opaque material stage still writes depth.
+        const float targetFrame=idMath::ClampFloat(0,13,float(ammoClip.Get())*13.0f/21.0f);
+        const int lastPoseTime=spawnArgs.GetInt("_nr_poseTime","-1");
+        float pose=spawnArgs.GetFloat("_nr_poseFrame",va("%g",targetFrame));
+        const float dt=lastPoseTime>=0 ? idMath::ClampFloat(0,.1f,MS2SEC(gameLocal.time-lastPoseTime)) : 1;
+        const float step=dt*(targetFrame>pose ? 38.0f : 65.0f);
+        pose+=idMath::ClampFloat(-step,step,targetFrame-pose);
+        spawnArgs.SetFloat("_nr_poseFrame",pose);spawnArgs.SetInt("_nr_poseTime",gameLocal.time);
+        struct NeedlePose {const char* name;float threshold;idVec3 pos;idQuat down,up;};
+        const NeedlePose poses[]={
+            {"b_l_needle1",1.0f,idVec3(24.7743595f,2.64958866f,6.9264476f),idQuat(0.737637875f,0.0f,0.0f,0.675196539f),idQuat(0.708171505f,-0.201977203f,-0.00750776548f,0.676492397f)},
+            {"b_l_needle2",2.0f,idVec3(23.911441f,2.0387397f,7.95332372f),idQuat(0.737637875f,0.0f,0.0f,0.675196539f),idQuat(0.708171505f,-0.201977203f,-0.00750776548f,0.676492397f)},
+            {"b_l_needle3",5.0f,idVec3(20.6705993f,3.12505178f,7.61590809f),idQuat(0.738250234f,0.0f,0.0f,0.67452694f),idQuat(0.708194907f,-0.204019951f,-0.0053408364f,0.675875217f)},
+            {"b_l_needle4",6.0f,idVec3(19.8226798f,2.45979533f,8.67091209f),idQuat(0.737711298f,0.0f,0.0f,0.675116317f),idQuat(0.707017181f,-0.205885259f,-0.0114143325f,0.676467056f)},
+            {"b_l_needle5",9.0f,idVec3(17.0893192f,3.11277688f,7.73284793f),idQuat(0.740621898f,0.0f,0.0f,0.671922022f),idQuat(0.707102949f,-0.215405612f,-0.00143440971f,0.673501139f)},
+            {"b_l_needle6",10.0f,idVec3(16.4278793f,2.33529612f,8.61423522f),idQuat(0.739211869f,0.0f,0.0f,0.673472949f),idQuat(0.707553159f,-0.209330017f,-0.00460837332f,0.674928318f)},
+            {"b_r_needle1",4.0f,idVec3(23.4077168f,-2.64958665f,6.92644849f),idQuat(-0.675196539f,0.0f,0.0f,0.737637875f),idQuat(0.00750776548f,0.676492397f,0.708171505f,0.201977203f)},
+            {"b_r_needle2",3.0f,idVec3(23.9114732f,-2.0387397f,7.95332015f),idQuat(-0.675196539f,0.0f,0.0f,0.737637875f),idQuat(0.00750776548f,0.676492397f,0.708171505f,0.201977203f)},
+            {"b_r_needle3",8.0f,idVec3(20.67056f,-3.12504731f,7.61591166f),idQuat(-0.67452694f,0.0f,0.0f,0.738250234f),idQuat(0.0053408364f,0.675875217f,0.708194907f,0.204019951f)},
+            {"b_r_needle4",7.0f,idVec3(19.8227191f,-2.45979086f,8.6709094f),idQuat(-0.675116317f,0.0f,0.0f,0.737711298f),idQuat(0.0114143325f,0.676467056f,0.707017181f,0.205885259f)},
+            {"b_r_needle5",12.0f,idVec3(17.0893764f,-3.11278135f,7.73284972f),idQuat(-0.671922022f,0.0f,0.0f,0.740621898f),idQuat(0.00143440971f,0.673501139f,0.707102949f,0.215405612f)},
+            {"b_r_needle6",11.0f,idVec3(16.4278525f,-2.33529612f,8.61423165f),idQuat(-0.673472949f,0.0f,0.0f,0.739211869f),idQuat(0.00460837332f,0.674928318f,0.707553159f,0.209330017f)},
+        };
+        for(int i=0;i<int(sizeof(poses)/sizeof(poses[0]));++i) {
+            const NeedlePose& n=poses[i];
+            float t=idMath::ClampFloat(0,1,pose-n.threshold+1);t=t*t*(3-2*t);
+            idQuat rotation;rotation.Slerp(n.down,n.up,t);
+            const idMat3 axis=rotation.ToMat3()*(.01f+.99f*t);
+            const jointHandle_t joint=animator.GetJointHandle(n.name);
+            animator.SetJointAxis(joint,JOINTMOD_LOCAL_OVERRIDE,axis);
+            animator.SetJointPos(joint,JOINTMOD_LOCAL_OVERRIDE,n.pos);
+            if(worldModel.GetEntity()!=NULL) {
+                idAnimator* wa=worldModel.GetEntity()->GetAnimator();
+                if(wa!=NULL) {const jointHandle_t wj=wa->GetJointHandle(n.name);
+                    wa->SetJointAxis(wj,JOINTMOD_LOCAL_OVERRIDE,axis);wa->SetJointPos(wj,JOINTMOD_LOCAL_OVERRIDE,n.pos);}
+            }
+        }
         const idAnimBlend* a=animator.CurrentAnim(ANIMCHANNEL_ALL);
         const bool reload=a!=NULL && strstr(a->AnimFullName(),"reload")!=NULL;
         const float age=reload ? a->AnimTime(gameLocal.time)/1000.0f : 0;
@@ -100,6 +133,9 @@ def extend(changed,replace):
  start=p.index('bool idProjectile::Collide(');end=p.index('void idProjectile::AddDefaultDamageEffect',start)
  body=p[start:end];anchor='\tExplode( collision, ignore );\n'
  body=replace(body,'\tdamageDefName = spawnArgs.GetString( \"def_damage\" );\n','''\tdamageDefName = spawnArgs.GetString( "def_damage" );
+    idEntity* nrHitActor=ent;
+    if(ent->IsType(idAFAttachment::Type)) nrHitActor=static_cast<idAFAttachment*>(ent)->GetBody();
+    const int nrHealthBefore=nrHitActor!=NULL ? nrHitActor->health : 0;
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_needle_shard")) {
         idEntity* damagedActor=ent;
         if(ent->IsType(idAFAttachment::Type)) damagedActor=static_cast<idAFAttachment*>(ent)->GetBody();
@@ -145,7 +181,7 @@ def extend(changed,replace):
         idEntityPtr<idEntity> targetId;targetId=target;spawnArgs.SetInt("_nr_target",targetId.GetSpawnId());
         smokeFly=NULL;smokeFlyTime=0;StartSound("snd_attach",SND_CHANNEL_BODY,0,false,NULL);
         BecomeActive(TH_THINK);physicsObj.PutToRest();
-        if(target!=NULL && target->IsType(idActor::Type) && target->health>0) {
+        if(target!=NULL && target->IsType(idActor::Type) && target->fl.takedamage && target->health>0 && target->health<nrHealthBefore) {
             int count=0;
             for(idEntity* e=gameLocal.spawnedEntities.Next();e!=NULL;e=e->spawnNode.Next()) {
                 if(!e->IsType(idProjectile::Type)) continue;
@@ -154,7 +190,7 @@ def extend(changed,replace):
                    needle->spawnArgs.GetBool("_nr_attached") && needle->spawnArgs.GetInt("_nr_target")==targetId.GetSpawnId() &&
                    needle->spawnArgs.GetInt("_nr_expireAt")>gameLocal.time && needle->spawnArgs.GetInt("_nr_superAt")==0) ++count;
             }
-            if(count>=3) {
+            if(count>=spawnArgs.GetInt("reach_combine_count","5")) {
                 for(idEntity* e=gameLocal.spawnedEntities.Next();e!=NULL;e=e->spawnNode.Next()) {
                     if(!e->IsType(idProjectile::Type)) continue;
                     idProjectile* needle=static_cast<idProjectile*>(e);
