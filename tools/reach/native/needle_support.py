@@ -28,6 +28,7 @@ def extend(changed,replace):
                 spawnArgs.SetBool("_nr_zoomDown",zoomDown);
             }
         }
+        if(weaponDef!=NULL) spawnArgs.SetVector("reach_view_offset",weaponDef->dict.GetVector("reach_view_offset"));
         // Source replacement animation includes both orientation and scale.
         // Deform actual joints; an inactive opaque material stage still writes depth.
         const float targetFrame=idMath::ClampFloat(0,13,float(ammoClip.Get())*13.0f/21.0f);
