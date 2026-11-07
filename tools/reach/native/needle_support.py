@@ -21,6 +21,13 @@ def extend(changed,replace):
         gameLocal.Printf("[ReachNeedle] legacy chaingun/M37 migrated; clip=%d reserve=%d\\n",ammoClip.Get(),owner->inventory.GetInventoryAmmoForType(ammoType));
     }
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_needle_rifle")) {
+        if(owner!=NULL && owner->health>0 && !gameLocal.inCinematic) {
+            const bool zoomDown=(owner->usercmd.buttons&BUTTON_ZOOM)!=0;
+            if(zoomDown!=spawnArgs.GetBool("_nr_zoomDown")) {
+                StartSound(zoomDown ? "snd_reach_zoom_in" : "snd_reach_zoom_out",SND_CHANNEL_ITEM,0,false,NULL);
+                spawnArgs.SetBool("_nr_zoomDown",zoomDown);
+            }
+        }
         // These material parameters are private to the Needle Rifle. Source
         // ammo-function frames control the visible bank independently of recoil.
         const float remaining=idMath::ClampFloat(0,1,float(ammoClip.Get())/21.0f);
