@@ -159,6 +159,8 @@ def extend(changed,replace):
         const idDeclEntityDef* traceDef=gameLocal.FindEntityDef("reach_needle_contrail",false);
         if(traceDef!=NULL && (collision.endpos-launchOrigin).LengthSqr()>4) {
             idDict args=traceDef->dict;args.SetVector("origin",launchOrigin);
+            args.Set("shader","reach/needle_rifle/contrail");args.SetBool("neverDormant",true);
+            args.SetFloat("shaderParm8",collision.endpos.x);args.SetFloat("shaderParm9",collision.endpos.y);args.SetFloat("shaderParm10",collision.endpos.z);args.SetFloat("shaderParm11",.65f);
             idEntity* beam=NULL;
             if(gameLocal.SpawnEntityDef(args,&beam,false) && beam!=NULL) {
                 renderEntity_t* re=beam->GetRenderEntity();
@@ -166,10 +168,14 @@ def extend(changed,replace):
                 re->shaderParms[SHADERPARM_BEAM_END_X]=collision.endpos.x;
                 re->shaderParms[SHADERPARM_BEAM_END_Y]=collision.endpos.y;
                 re->shaderParms[SHADERPARM_BEAM_END_Z]=collision.endpos.z;
-                re->shaderParms[SHADERPARM_BEAM_WIDTH]=.42f;
+                re->shaderParms[SHADERPARM_BEAM_WIDTH]=.65f;
                 re->shaderParms[SHADERPARM_TIMEOFFSET]=-MS2SEC(gameLocal.time);
                 re->noShadow=true;re->noSelfShadow=true;
-                beam->UpdateVisuals();beam->PostEventMS(&EV_Remove,90);
+                re->shaderParms[0]=re->shaderParms[1]=re->shaderParms[2]=re->shaderParms[3]=1;
+                re->bounds=re->hModel->Bounds(re);
+                beam->Show();beam->UpdateVisuals();beam->Present();
+                if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachNeedle] BEAM model=%s material=%s hidden=%d radius=%.1f\\n",re->hModel->Name(),re->customShader->GetName(),beam->IsHidden(),re->bounds.GetRadius());
+                beam->PostEventMS(&EV_Remove,90);
             }
         }
         idEntity* target=ent;
@@ -182,15 +188,22 @@ def extend(changed,replace):
             const idVec3 start=collision.endpos+collision.c.normal*.6f;
             trace_t ricochet;gameLocal.clip.TracePoint(ricochet,start,start+reflected*640.0f,MASK_SHOT_RENDERMODEL,this);
             if(traceDef!=NULL && (ricochet.endpos-start).LengthSqr()>4) {
-                idDict args=traceDef->dict;args.SetVector("origin",start);idEntity* beam=NULL;
+                idDict args=traceDef->dict;args.SetVector("origin",start);
+                args.Set("shader","reach/needle_rifle/ricochet");args.SetBool("neverDormant",true);
+                args.SetFloat("shaderParm8",ricochet.endpos.x);args.SetFloat("shaderParm9",ricochet.endpos.y);args.SetFloat("shaderParm10",ricochet.endpos.z);args.SetFloat("shaderParm11",.65f);
+                idEntity* beam=NULL;
                 if(gameLocal.SpawnEntityDef(args,&beam,false) && beam!=NULL) {
                     renderEntity_t* re=beam->GetRenderEntity();re->customShader=declManager->FindMaterial("reach/needle_rifle/ricochet");
                     re->shaderParms[SHADERPARM_BEAM_END_X]=ricochet.endpos.x;
                     re->shaderParms[SHADERPARM_BEAM_END_Y]=ricochet.endpos.y;
                     re->shaderParms[SHADERPARM_BEAM_END_Z]=ricochet.endpos.z;
-                    re->shaderParms[SHADERPARM_BEAM_WIDTH]=.32f;
+                    re->shaderParms[SHADERPARM_BEAM_WIDTH]=.65f;
                     re->shaderParms[SHADERPARM_TIMEOFFSET]=-MS2SEC(gameLocal.time);
-                    re->noShadow=true;re->noSelfShadow=true;beam->UpdateVisuals();beam->PostEventMS(&EV_Remove,130);
+                    re->noShadow=true;re->noSelfShadow=true;re->shaderParms[0]=re->shaderParms[1]=re->shaderParms[2]=re->shaderParms[3]=1;
+                re->bounds=re->hModel->Bounds(re);
+                beam->Show();beam->UpdateVisuals();beam->Present();
+                if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachNeedle] BEAM model=%s material=%s hidden=%d radius=%.1f\\n",re->hModel->Name(),re->customShader->GetName(),beam->IsHidden(),re->bounds.GetRadius());
+                beam->PostEventMS(&EV_Remove,130);
                 }
             }
             idEntityFx::StartFx(spawnArgs.GetString("fx_shatter"),&collision.endpos,&mat3_identity,NULL,false);
