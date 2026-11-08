@@ -40,7 +40,14 @@ def extend(changed,replace):
             spawnArgs.SetFloat("_nr_bankPopFrom",float(previousClip)*13.0f/21.0f);
         }
         spawnArgs.SetInt("_nr_visualClip",ammoClip.Get());
-        spawnArgs.SetFloat("_nr_poseFrame",targetFrame);
+        const int lastPoseTime=spawnArgs.GetInt("_nr_poseTime","-1");
+        const float dt=lastPoseTime>=0 ? idMath::ClampFloat(0,.1f,MS2SEC(gameLocal.time-lastPoseTime)) : 1;
+        float pose=spawnArgs.GetFloat("_nr_poseFrame",va("%g",targetFrame));
+        // Retain the accepted short source rotation/scale on depletion.
+        // Reload is the separate, fast rigid emergence impulse below.
+        if(targetFrame>=pose) pose=targetFrame;
+        else pose-=idMath::ClampFloat(0,dt*65.0f,pose-targetFrame);
+        spawnArgs.SetFloat("_nr_poseFrame",pose);spawnArgs.SetInt("_nr_poseTime",gameLocal.time);
         const int popAt=spawnArgs.GetInt("_nr_bankPopAt","-10000");
         const float popAge=MS2SEC(gameLocal.time-popAt);
         const float popFrom=spawnArgs.GetFloat("_nr_bankPopFrom");
@@ -61,7 +68,8 @@ def extend(changed,replace):
         };
         for(int i=0;i<int(sizeof(poses)/sizeof(poses[0]));++i) {
             const NeedlePose& n=poses[i];
-            const float displayed=targetFrame>=n.threshold ? 1.0f : 0.0f;
+            float displayed=idMath::ClampFloat(0,1,pose-n.threshold+1);
+            displayed=displayed*displayed*(3-2*displayed);
             float pop=1.0f;
             if(displayed>0 && popFrom<n.threshold && popAge>=0 && popAge<.25f) {
                 // One short paired-bank impulse at clip insertion. Crystals
@@ -71,8 +79,8 @@ def extend(changed,replace):
                 const float v=u-1.0f;
                 pop=1.0f+2.15f*v*v*v+1.15f*v*v;
             }
-            idQuat rotation;rotation.Slerp(n.down,n.up,idMath::ClampFloat(0,1,pop));
-            const float visible=displayed>0 && pop>.015f ? 1.0f : .01f;
+            idQuat rotation;rotation.Slerp(n.down,n.up,idMath::ClampFloat(0,1,pop)*displayed);
+            const float visible=pop>.015f ? .01f+.99f*displayed : .01f;
             const idMat3 axis=rotation.ToMat3()*visible;
             const idVec3 position=n.pos+idVec3(0,0,-3.1f*(1.0f-pop));
             const jointHandle_t joint=animator.GetJointHandle(n.name);
