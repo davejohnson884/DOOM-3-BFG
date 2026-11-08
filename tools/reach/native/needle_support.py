@@ -32,25 +32,12 @@ def extend(changed,replace):
         // Source replacement animation includes both orientation and scale.
         // Deform actual joints; an inactive opaque material stage still writes depth.
         const float targetFrame=idMath::ClampFloat(0,13,float(ammoClip.Get())*13.0f/21.0f);
-        const int previousClip=spawnArgs.GetInt("_nr_visualClip",va("%d",ammoClip.Get()));
-        // The ammunition replacement track is a set of discrete ammo states,
-        // not a reload action to crawl through one needle at a time.
-        if(ammoClip.Get()>previousClip) {
-            spawnArgs.SetInt("_nr_bankPopAt",gameLocal.time);
-            spawnArgs.SetFloat("_nr_bankPopFrom",float(previousClip)*13.0f/21.0f);
-        }
-        spawnArgs.SetInt("_nr_visualClip",ammoClip.Get());
         const int lastPoseTime=spawnArgs.GetInt("_nr_poseTime","-1");
-        const float dt=lastPoseTime>=0 ? idMath::ClampFloat(0,.1f,MS2SEC(gameLocal.time-lastPoseTime)) : 1;
         float pose=spawnArgs.GetFloat("_nr_poseFrame",va("%g",targetFrame));
-        // Retain the accepted short source rotation/scale on depletion.
-        // Reload is the separate, fast rigid emergence impulse below.
-        if(targetFrame>=pose) pose=targetFrame;
-        else pose-=idMath::ClampFloat(0,dt*65.0f,pose-targetFrame);
+        const float dt=lastPoseTime>=0 ? idMath::ClampFloat(0,.1f,MS2SEC(gameLocal.time-lastPoseTime)) : 1;
+        const float step=dt*(targetFrame>pose ? 38.0f : 65.0f);
+        pose+=idMath::ClampFloat(-step,step,targetFrame-pose);
         spawnArgs.SetFloat("_nr_poseFrame",pose);spawnArgs.SetInt("_nr_poseTime",gameLocal.time);
-        const int popAt=spawnArgs.GetInt("_nr_bankPopAt","-10000");
-        const float popAge=MS2SEC(gameLocal.time-popAt);
-        const float popFrom=spawnArgs.GetFloat("_nr_bankPopFrom");
         struct NeedlePose {const char* name;float threshold;idVec3 pos;idQuat down,up;};
         const NeedlePose poses[]={
             {"b_l_needle1",1.0f,idVec3(24.7743595f,2.64958866f,6.9264476f),idQuat(0.737637875f,0.0f,0.0f,0.675196539f),idQuat(0.708171505f,-0.201977203f,-0.00750776548f,0.676492397f)},
@@ -68,28 +55,16 @@ def extend(changed,replace):
         };
         for(int i=0;i<int(sizeof(poses)/sizeof(poses[0]));++i) {
             const NeedlePose& n=poses[i];
-            float displayed=idMath::ClampFloat(0,1,pose-n.threshold+1);
-            displayed=displayed*displayed*(3-2*displayed);
-            float pop=1.0f;
-            if(displayed>0 && popFrom<n.threshold && popAge>=0 && popAge<.25f) {
-                // One short paired-bank impulse at clip insertion. Crystals
-                // translate rigidly out of their sockets, with a tiny settle;
-                // they do not grow from points over a third of a second.
-                const float u=idMath::ClampFloat(0,1,(popAge-.003f*(n.threshold-1))/.105f);
-                const float v=u-1.0f;
-                pop=1.0f+2.15f*v*v*v+1.15f*v*v;
-            }
-            idQuat rotation;rotation.Slerp(n.down,n.up,idMath::ClampFloat(0,1,pop)*displayed);
-            const float visible=pop>.015f ? .01f+.99f*displayed : .01f;
-            const idMat3 axis=rotation.ToMat3()*visible;
-            const idVec3 position=n.pos+idVec3(0,0,-3.1f*(1.0f-pop));
+            float t=idMath::ClampFloat(0,1,pose-n.threshold+1);t=t*t*(3-2*t);
+            idQuat rotation;rotation.Slerp(n.down,n.up,t);
+            const idMat3 axis=rotation.ToMat3()*(.01f+.99f*t);
             const jointHandle_t joint=animator.GetJointHandle(n.name);
             animator.SetJointAxis(joint,JOINTMOD_LOCAL_OVERRIDE,axis);
-            animator.SetJointPos(joint,JOINTMOD_LOCAL_OVERRIDE,position);
+            animator.SetJointPos(joint,JOINTMOD_LOCAL_OVERRIDE,n.pos);
             if(worldModel.GetEntity()!=NULL) {
                 idAnimator* wa=worldModel.GetEntity()->GetAnimator();
                 if(wa!=NULL) {const jointHandle_t wj=wa->GetJointHandle(n.name);
-                    wa->SetJointAxis(wj,JOINTMOD_LOCAL_OVERRIDE,axis);wa->SetJointPos(wj,JOINTMOD_LOCAL_OVERRIDE,position);}
+                    wa->SetJointAxis(wj,JOINTMOD_LOCAL_OVERRIDE,axis);wa->SetJointPos(wj,JOINTMOD_LOCAL_OVERRIDE,n.pos);}
             }
         }
         const idAnimBlend* a=animator.CurrentAnim(ANIMCHANNEL_ALL);
