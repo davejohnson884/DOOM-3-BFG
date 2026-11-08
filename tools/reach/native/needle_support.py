@@ -281,6 +281,14 @@ def extend(changed,replace):
    expr='!idStr::Icmpn('+('shader->GetName()' if f.endswith('RenderBackend.cpp') else 'stage->material->GetName()')+',"reach/rocket/fx/",16)'
    other=expr.replace('reach/rocket/fx/",16','reach/needle_rifle/fx/",22')
   assert expr in s;s=s.replace(expr,'('+expr+' || '+other+')');changed[f]=s
+ # Every Needle Rifle custom r6 stage needs the depth resource prepared
+ # before binding, including static crystal rims and optical beam materials.
+ # Preparing it later in the muzzle pass can replace a texture already used
+ # by an earlier command in that first frame. Also select the matching MSAA PS.
+ f='neo/renderer/RenderBackend.cpp';s=changed[f]
+ old='!idStr::Icmpn(shader->GetName(),"reach/needle_rifle/fx/",22)'
+ new='!idStr::Icmpn(shader->GetName(),"reach/needle_rifle/",19)'
+ assert s.count(old)==1;s=s.replace(old,new);changed[f]=s
  # Per-weapon projection stays in existing saved shader parameters.
  f='neo/d3xp/Weapon.cpp';w=changed[f]
  anchor='if(weaponDef!=NULL) spawnArgs.SetVector("reach_view_offset",weaponDef->dict.GetVector("reach_view_offset"));'
