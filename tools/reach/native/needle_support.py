@@ -116,7 +116,11 @@ def extend(changed,replace):
             idEntity* victim=target.GetEntity();
             const idVec3 position=physicsObj.GetOrigin();
             Unbind();spawnArgs.SetBool("_nr_super",true);
-            if(victim!=NULL && victim->fl.takedamage && victim->health>0)
+            if(victim!=NULL && victim->health<=0) {
+                // Host gib API avoids replaying campaign Killed callbacks.
+                if(victim->IsType(idAFEntity_Gibbable::Type) && victim->spawnArgs.GetBool("gib"))
+                    victim->ProcessEvent(&EV_Gib,spawnArgs.GetString("def_attached_super"));
+            } else if(victim!=NULL && victim->fl.takedamage)
                 victim->Damage(this,owner.GetEntity(),vec3_zero,spawnArgs.GetString("def_attached_super"),damagePower,INVALID_JOINT);
             trace_t impact;memset(&impact,0,sizeof(impact));impact.endpos=position;impact.endAxis=physicsObj.GetAxis();impact.c.normal.Set(0,0,1);
             Explode(impact,victim);
@@ -148,6 +152,7 @@ def extend(changed,replace):
         }
     }
 ''',f)
+ body=body.replace('ent->Damage( this, owner.GetEntity(), dir, damageDefName, damageScale, CLIPMODEL_ID_TO_JOINT_HANDLE( collision.c.id ) );','if(common->IsMultiplayer() || !spawnArgs.GetBool("reach_needle_shard") || nrHitActor==NULL || nrHitActor->health>0 || !nrHitActor->IsType(idAFEntity_Gibbable::Type)) ent->Damage( this, owner.GetEntity(), dir, damageDefName, damageScale, CLIPMODEL_ID_TO_JOINT_HANDLE( collision.c.id ) );')
  body=replace(body,anchor,'''    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_needle_shard")) {
         // A near-instant source shard still leaves a brief optical trace. This
         // visual-only beam uses ordinary entity/removal-event save support.
@@ -169,11 +174,39 @@ def extend(changed,replace):
         }
         idEntity* target=ent;
         if(ent->IsType(idAFAttachment::Type)) target=static_cast<idAFAttachment*>(ent)->GetBody();
+        const bool organic=target!=NULL && (target->IsType(idActor::Type) ||
+            (target->IsType(idAFEntity_Gibbable::Type) && target->spawnArgs.GetBool("bleed")));
+        if(!organic) {
+            // A reflected optical shard is bounded by the next solid surface.
+            idVec3 reflected=dir-2.0f*(dir*collision.c.normal)*collision.c.normal;reflected.Normalize();
+            const idVec3 start=collision.endpos+collision.c.normal*.6f;
+            trace_t ricochet;gameLocal.clip.TracePoint(ricochet,start,start+reflected*640.0f,MASK_SHOT_RENDERMODEL,this);
+            if(traceDef!=NULL && (ricochet.endpos-start).LengthSqr()>4) {
+                idDict args=traceDef->dict;args.SetVector("origin",start);idEntity* beam=NULL;
+                if(gameLocal.SpawnEntityDef(args,&beam,false) && beam!=NULL) {
+                    renderEntity_t* re=beam->GetRenderEntity();re->customShader=declManager->FindMaterial("reach/needle_rifle/ricochet");
+                    re->shaderParms[SHADERPARM_BEAM_END_X]=ricochet.endpos.x;
+                    re->shaderParms[SHADERPARM_BEAM_END_Y]=ricochet.endpos.y;
+                    re->shaderParms[SHADERPARM_BEAM_END_Z]=ricochet.endpos.z;
+                    re->shaderParms[SHADERPARM_BEAM_WIDTH]=.32f;
+                    re->shaderParms[SHADERPARM_TIMEOFFSET]=-MS2SEC(gameLocal.time);
+                    re->noShadow=true;re->noSelfShadow=true;beam->UpdateVisuals();beam->PostEventMS(&EV_Remove,130);
+                }
+            }
+            idEntityFx::StartFx(spawnArgs.GetString("fx_shatter"),&collision.endpos,&mat3_identity,NULL,false);
+            StartSound("snd_ricochet",SND_CHANNEL_BODY,0,false,NULL);
+            if(cvarSystem->GetCVarBool("g_debugWeapon")) gameLocal.Printf("[ReachNeedle] RICOCHET length=%.1f\\n",(ricochet.endpos-start).Length());
+            Fizzle();return true;
+        }
         CancelEvents(&EV_Fizzle);CancelEvents(&EV_Explode);
         physicsObj.SetContents(0);physicsObj.SetClipMask(0);
         physicsObj.SetLinearVelocity(vec3_zero);physicsObj.SetAngularVelocity(vec3_zero);physicsObj.SetGravity(vec3_zero);
         physicsObj.SetOrigin(collision.endpos-dir*.35f);
-        if(target!=NULL && target->IsType(idActor::Type)) {
+        if(target!=NULL && target->IsType(idAFEntity_Base::Type) &&
+           static_cast<idAFEntity_Base*>(target)->IsActiveAF() && collision.c.id>=0 &&
+           collision.c.id<static_cast<idAFEntity_Base*>(target)->GetAFPhysics()->GetNumBodies()) {
+            BindToBody(target,collision.c.id,true);
+        } else if(target!=NULL && target->IsType(idActor::Type)) {
             const jointHandle_t joint=CLIPMODEL_ID_TO_JOINT_HANDLE(collision.c.id);
             if(joint!=INVALID_JOINT && ent->GetAnimator()!=NULL) BindToJoint(ent,joint,true);
             else Bind(ent,true);
@@ -182,7 +215,9 @@ def extend(changed,replace):
         idEntityPtr<idEntity> targetId;targetId=target;spawnArgs.SetInt("_nr_target",targetId.GetSpawnId());
         smokeFly=NULL;smokeFlyTime=0;StartSound("snd_attach",SND_CHANNEL_BODY,0,false,NULL);
         BecomeActive(TH_THINK);physicsObj.PutToRest();
-        const bool canCombine=target!=NULL && target->IsType(idActor::Type) && target->fl.takedamage && target->health>0 && target->health<nrHealthBefore;
+        const bool canCombine=target!=NULL && !target->IsHidden() &&
+            ((target->IsType(idActor::Type) && (target->health<=0 || (target->fl.takedamage && target->health<nrHealthBefore))) ||
+             (target->IsType(idAFEntity_Gibbable::Type) && target->health<=0 && target->spawnArgs.GetBool("bleed")));
         spawnArgs.SetBool("_nr_canCombine",canCombine);
         if(canCombine) {
             int count=0;
@@ -233,4 +268,17 @@ def extend(changed,replace):
    expr='!idStr::Icmpn('+('shader->GetName()' if f.endswith('RenderBackend.cpp') else 'stage->material->GetName()')+',"reach/rocket/fx/",16)'
    other=expr.replace('reach/rocket/fx/",16','reach/needle_rifle/fx/",22')
   assert expr in s;s=s.replace(expr,'('+expr+' || '+other+')');changed[f]=s
+ # Per-weapon projection stays in existing saved shader parameters.
+ f='neo/d3xp/Weapon.cpp';w=changed[f]
+ anchor='if(weaponDef!=NULL) spawnArgs.SetVector("reach_view_offset",weaponDef->dict.GetVector("reach_view_offset"));'
+ w=replace(w,anchor,anchor+'\n        if(weaponDef!=NULL) spawnArgs.SetFloat("reach_weapon_fov",weaponDef->dict.GetFloat("reach_weapon_fov","68"));\n        renderEntity.shaderParms[11]=spawnArgs.GetFloat("reach_weapon_fov","68");',f)
+ anchor='flash->shaderParms[5] = float( gameLocal.random.RandomInt( 8 ) );'
+ w=replace(w,anchor,anchor+'\n            if(spawnArgs.GetBool("reach_needle_rifle")) flash->shaderParms[11]=spawnArgs.GetFloat("reach_weapon_fov","68");',f)
+ for expr in ['cvarSystem->GetCVarFloat( "r_reachWeaponFov" )','cvarSystem->GetCVarFloat("r_reachWeaponFov")']:
+  assert expr in w
+  w=w.replace(expr,'(spawnArgs.GetBool("reach_needle_rifle") ? spawnArgs.GetFloat("reach_weapon_fov","68") : '+expr+')')
+ changed[f]=w
+ f='neo/renderer/tr_frontend_addmodels.cpp';w=changed[f]
+ w=replace(w,'const float fov = r_reachWeaponFov.GetFloat();','const float fov = ReachProjection::ModelFov( renderEntity->hModel->Name(), renderEntity->shaderParms[11], r_reachWeaponFov.GetFloat() );',f)
+ changed[f]=w
  return changed
