@@ -33,7 +33,10 @@
             re->shaderParms[SHADERPARM_BEAM_END_Z]=tail.z;
             re->shaderParms[SHADERPARM_BEAM_WIDTH]=.42f*(1.0f-float(j)/10.0f);
             const float fade=(1.0f-float(j)/8.0f)*idMath::ClampFloat(0.0f,1.0f,speed/120.0f);
-            beam->SetColor(1.0f,.96f,.85f,.46f*fade);
+            re->shaderParms[SHADERPARM_RED]=1.0f;
+            re->shaderParms[SHADERPARM_GREEN]=.96f;
+            re->shaderParms[SHADERPARM_BLUE]=.85f;
+            re->shaderParms[SHADERPARM_ALPHA]=.46f*fade;
             beam->Show();beam->UpdateVisuals();beam->Present();
         }
         if(cvarSystem->GetCVarBool("g_debugWeapon") && gameLocal.time>=spawnArgs.GetInt("_frag_nextTrace")) {
