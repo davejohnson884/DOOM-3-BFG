@@ -20,7 +20,7 @@
             if((head-tail).LengthSqr()<.25f || speed<35.0f) {if(beam!=NULL)beam->Hide();continue;}
             if(beam==NULL) {
                 idDict args;args.Set("model","_BEAM");args.SetBool("networkSync",false);
-                beam=gameLocal.SpawnEntityType(idEntity::Type,&args);
+                beam=gameLocal.SpawnEntityType(idStaticEntity::Type,&args);
                 if(beam==NULL)continue;
                 reference=beam;spawnArgs.SetInt(va("_frag_beam%d",j),reference.GetSpawnId());
             }
