@@ -34,16 +34,15 @@ def extend(changed,replace):
         const idAnimBlend* a=animator.CurrentAnim(ANIMCHANNEL_ALL);
         const bool reload=a!=NULL && strstr(a->AnimFullName(),"reload")!=NULL;
         const float age=reload ? a->AnimTime(gameLocal.time)/1000.0f : 0;
-        // Visual emergence follows the cap press, independently of the frame48
-        // gameplay fill. Keep the accepted source Slerp/scale and ordered sockets.
-        const float refillAt=spawnArgs.GetFloat("reach_needle_refill_start","1.8666667");
+        // Keep surviving needles at their existing ammo pose during reload.
+        // The frame48 magazine-in event increases ammoClip; only the missing
+        // sockets rise then, using the accepted source Slerp/scale deformation.
         const float refillDuration=idMath::ClampFloat(.08f,.5f,spawnArgs.GetFloat("reach_needle_refill_duration",".1666667"));
-        const bool bankRetracted=reload && age>=.2f && age<refillAt;
-        const float targetFrame=bankRetracted ? 0 : idMath::ClampFloat(0,13,float(ammoClip.Get())*13.0f/21.0f);
+        const float targetFrame=idMath::ClampFloat(0,13,float(ammoClip.Get())*13.0f/21.0f);
         const int lastPoseTime=spawnArgs.GetInt("_nr_poseTime","-1");
         float pose=spawnArgs.GetFloat("_nr_poseFrame",va("%g",targetFrame));
         const float dt=lastPoseTime>=0 ? idMath::ClampFloat(0,.1f,MS2SEC(gameLocal.time-lastPoseTime)) : 1;
-        const float riseSpeed=reload && age>=refillAt ? 13.0f/refillDuration : 38.0f;
+        const float riseSpeed=reload ? 13.0f/refillDuration : 38.0f;
         const float step=dt*(targetFrame>pose ? riseSpeed : 65.0f);
         pose+=idMath::ClampFloat(-step,step,targetFrame-pose);
         spawnArgs.SetFloat("_nr_poseFrame",pose);spawnArgs.SetInt("_nr_poseTime",gameLocal.time);
