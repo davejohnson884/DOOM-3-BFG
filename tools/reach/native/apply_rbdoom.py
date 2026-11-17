@@ -432,6 +432,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed=rocket_extend(changed,replace)
     from needle_support import extend as needle_extend
     changed=needle_extend(changed,replace)
+    from frag_support import extend as frag_extend
+    changed=frag_extend(changed,replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
