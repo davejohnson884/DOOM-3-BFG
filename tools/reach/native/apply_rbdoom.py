@@ -436,6 +436,8 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     changed=frag_extend(changed,replace)
     from frag_flight_support import extend as flight_extend
     changed=flight_extend(changed,replace)
+    from fuelrod_support import extend as fuelrod_extend
+    changed=fuelrod_extend(changed,replace)
     # Validate all changes before touching the source checkout.
     for path in paths:
         if changed[path] == original[path] or MARKER not in changed[path]:
@@ -450,6 +452,7 @@ static bool R_ReachProjectionEligible( const renderEntity_t& ent, const viewDef_
     (root/'neo/framework/ReachEffectMotion.h').write_bytes((ROOT/'ReachEffectMotion.h').read_bytes())
     surface_install(root,ROOT)
     (root/'neo/d3xp/ReachM319Policy.h').write_bytes((ROOT/'M319Policy.h').read_bytes())
+    (root/'neo/d3xp/ReachFuelRodPolicy.h').write_bytes((ROOT/'FuelRodPolicy.h').read_bytes())
     (root/'neo/renderer/ReachSpartanModelAliases.h').write_bytes((ROOT/'SpartanModelAliases.h').read_bytes())
     (root/'neo/d3xp/ReachQuickActions.h').write_bytes((ROOT/'ReachQuickActions.h').read_bytes())
     (root/'neo/d3xp/ReachMuzzleEffects.h').write_bytes((ROOT/'MuzzleEffects.h').read_bytes())

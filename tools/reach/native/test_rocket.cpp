@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include "CameraMotion.h"
+#include "FuelRodPolicy.h"
 #include "WeaponProjection.h"
 int main() {
     const auto start=ReachCamera::RocketReloadMotion(0);
@@ -22,4 +23,13 @@ int main() {
     assert(ReachProjection::Eligible("models/md5/weapons/reach_rocket/view.md5mesh",true,true,1,1,false,false));
     assert(!ReachProjection::Eligible("models/reach/rocket/held.md5mesh",true,true,1,1,false,false));
     assert(!ReachProjection::Eligible("models/md5/weapons/reach_rocket/view.md5mesh",true,true,1,1,false,true));
+    assert(ReachFuelRod::Speed(0)==1800.0f && ReachFuelRod::Speed(540)==1800.0f);
+    assert(ReachFuelRod::Speed(570)==1290.0f && ReachFuelRod::Speed(600)==780.0f);
+    assert(ReachFuelRod::Speed(9600)==780.0f);
+    assert(ReachFuelRod::Bounce(false,1800.0f,.4f));
+    assert(!ReachFuelRod::Bounce(false,780.0f,.4f));
+    assert(!ReachFuelRod::Bounce(false,1800.0f,.9f));
+    assert(!ReachFuelRod::Bounce(true,1800.0f,.4f));
+    assert(ReachProjection::Eligible("models/md5/weapons/reach_fuelrod/view.md5mesh",true,true,1,1,false,false));
+    assert(!ReachProjection::Eligible("models/reach/fuelrod/held.md5mesh",true,true,1,1,false,false));
 }
