@@ -24,7 +24,10 @@ def extend(changed,replace):
 '''+old
     a=s.index('void idProjectile::Launch(');b=s.index('void idProjectile::Think()',a)
     launch=s[a:b];launch=replace(launch,old,new,f);s=s[:a]+launch+s[b:]
-    s=replace(s,'void idProjectile::Think()\n{\n','void idProjectile::Think()\n{\n'+(root/'FragFlightThink.cpp').read_text(),f)
+    a=s.index('void idProjectile::Think()\n');b=s.index('void idProjectile::AddParticlesAndLight()',a)
+    think=s[a:b];anchor='\tDecayOriginAndAxisDelta();'
+    think=replace(think,anchor,(root/'FragFlightThink.cpp').read_text()+'\n'+anchor,f)
+    s=s[:a]+think+s[b:]
     s=replace(s,'\t// Reach opt-in weapon projection / source-tag frag fuse.',(root/'FragFlightBounce.cpp').read_text()+'\t// Reach opt-in weapon projection / source-tag frag fuse.',f)
     old='spawnArgs.GetBool("reach_needle_shard"))) BecomeActive(TH_THINK);'
     s=replace(s,old,old.replace(')))',' ) || spawnArgs.GetBool("reach_frag_ballistics")))'),f)
