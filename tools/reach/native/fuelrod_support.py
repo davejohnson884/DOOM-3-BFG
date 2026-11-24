@@ -14,6 +14,13 @@ def extend(changed,replace):
         gameLocal.Printf("[ReachFuelRod] legacy BFG migrated; clip=%d reserve=%d\\n",ammoClip.Get(),owner->inventory.GetInventoryAmmoForType(ammoType));
     }
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_fuelrod")) {
+        if(owner!=NULL && owner->health>0 && !gameLocal.inCinematic) {
+            const bool zoomDown=(owner->usercmd.buttons&BUTTON_ZOOM)!=0;
+            if(zoomDown!=spawnArgs.GetBool("_fuel_zoomDown")) {
+                StartSound(zoomDown ? "snd_reach_zoom_in" : "snd_reach_zoom_out",SND_CHANNEL_ITEM,0,false,NULL);
+                spawnArgs.SetBool("_fuel_zoomDown",zoomDown);
+            }
+        }
         const idAnimBlend* a=animator.CurrentAnim(ANIMCHANNEL_ALL);
         const bool reload=a!=NULL && strstr(a->AnimFullName(),"reload")!=NULL;
         const float age=reload ? a->AnimTime(gameLocal.time)/1000.0f : 0;
