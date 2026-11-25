@@ -14,6 +14,8 @@ def extend(changed,replace):
         gameLocal.Printf("[ReachFuelRod] legacy BFG migrated; clip=%d reserve=%d\\n",ammoClip.Get(),owner->inventory.GetInventoryAmmoForType(ammoType));
     }
     if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_fuelrod")) {
+        if(weaponDef!=NULL) spawnArgs.SetFloat("reach_weapon_fov",weaponDef->dict.GetFloat("reach_weapon_fov","60"));
+        renderEntity.shaderParms[11]=spawnArgs.GetFloat("reach_weapon_fov","60");
         if(owner!=NULL && owner->health>0 && !gameLocal.inCinematic) {
             const bool zoomDown=(owner->usercmd.buttons&BUTTON_ZOOM)!=0;
             if(zoomDown!=spawnArgs.GetBool("_fuel_zoomDown")) {
@@ -58,6 +60,15 @@ def extend(changed,replace):
  s=s.replace('const bool authored=needle ||','const bool fuelrod=spawnArgs.GetBool("reach_fuelrod");\n    const bool authored=fuelrod || needle ||')
  s=s.replace('if(needle || shotgunAction ||','if(fuelrod || needle || shotgunAction ||')
  s=s.replace('shotgun || m37Source || rocket);','shotgun || m37Source || rocket || fuelrod);')
+ changed[f]=s
+ # Source-authored weapon FOV must also govern the attached flash and projected
+ # world-smoke origins; keep every other weapon's fallback exactly as before.
+ s=changed[f]
+ for expr in ['spawnArgs.GetBool("reach_needle_rifle") ? spawnArgs.GetFloat("reach_weapon_fov","68")', 'if(spawnArgs.GetBool("reach_needle_rifle")) flash->shaderParms[11]=spawnArgs.GetFloat("reach_weapon_fov","68");']:
+  assert expr in s,expr
+  if expr.startswith('if('):new=expr.replace('spawnArgs.GetBool("reach_needle_rifle")','(spawnArgs.GetBool("reach_needle_rifle") || spawnArgs.GetBool("reach_fuelrod"))').replace('"68"','spawnArgs.GetBool("reach_fuelrod") ? "60" : "68"')
+  else:new=expr.replace('spawnArgs.GetBool("reach_needle_rifle")','(spawnArgs.GetBool("reach_needle_rifle") || spawnArgs.GetBool("reach_fuelrod"))').replace('"68"','spawnArgs.GetBool("reach_fuelrod") ? "60" : "68"')
+  s=s.replace(expr,new)
  changed[f]=s
  f='neo/d3xp/Player.cpp';s=changed[f];expr='idStr::Cmp( reachMotionWeapon->spawnArgs.GetString( "model_view" ), "viewmodel_reach_m319" ) == 0'
  assert expr in s;changed[f]=s.replace(expr,'( '+expr+' || '+expr.replace('reach_m319','reach_fuelrod')+' )')

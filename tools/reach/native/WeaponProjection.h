@@ -20,6 +20,8 @@ inline bool ModelNamed( const char* model, const char* expected )
 
 inline float ModelFov(const char* model, float requested, float fallback)
 {
+    if(model!=nullptr && (ModelNamed(model,"models/md5/weapons/reach_fuelrod/view.md5mesh") || ModelNamed(model,"reach_fuelrod_flash.prt")))
+        return std::isfinite(requested) && requested>=40.0f && requested<=110.0f ? requested : 60.0f;
     if(model!=nullptr && (ModelNamed(model,"models/md5/weapons/reach_needle_rifle/view.md5mesh") || ModelNamed(model,"reach_needle_rifle_flash.prt")))
         return std::isfinite(requested) && requested>=40.0f && requested<=110.0f ? requested : 68.0f;
     return fallback;
