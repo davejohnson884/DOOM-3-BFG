@@ -57,6 +57,15 @@ def extend(changed,replace):
  s=replace(s,anchor,anchor+'''    if(!common->IsMultiplayer() && owner!=NULL && spawnArgs.GetBool("reach_fuelrod"))
         return idMath::Ftoi(RAD2DEG(2*idMath::ATan(idMath::Tan(DEG2RAD(owner->DefaultFov()*.5f))/2.0f)));
 ''',f)
+ anchor='void idWeapon::Event_AnimDone( int channel, int blendFrames )\n{\n'
+ s=replace(s,anchor,anchor+'''    if(!common->IsMultiplayer() && spawnArgs.GetBool("reach_fuelrod") && channel==ANIMCHANNEL_ALL && WEAPON_ATTACK) {
+        const idAnimBlend* a=animator.CurrentAnim(channel);
+        // The source ready-for-use event is frame80; retain the complete
+        // 90-frame visual recovery when the player has not requested fire.
+        if(a!=NULL && strstr(a->AnimFullName(),"reload")!=NULL && a->AnimTime(gameLocal.time)>=2667)
+            {idThread::ReturnInt(true);return;}
+    }
+''',f)
  s=s.replace('const bool authored=needle ||','const bool fuelrod=spawnArgs.GetBool("reach_fuelrod");\n    const bool authored=fuelrod || needle ||')
  s=s.replace('if(needle || shotgunAction ||','if(fuelrod || needle || shotgunAction ||')
  s=s.replace('shotgun || m37Source || rocket);','shotgun || m37Source || rocket || fuelrod);')

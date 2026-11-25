@@ -32,4 +32,7 @@ int main() {
     assert(!ReachFuelRod::Bounce(true,1800.0f,.4f));
     assert(ReachProjection::Eligible("models/md5/weapons/reach_fuelrod/view.md5mesh",true,true,1,1,false,false));
     assert(!ReachProjection::Eligible("models/reach/fuelrod/held.md5mesh",true,true,1,1,false,false));
+    assert(ReachProjection::ModelFov("models/md5/weapons/reach_fuelrod/view.md5mesh",0,54)==60);
+    assert(ReachProjection::ModelFov("models/md5/weapons/reach_fuelrod/view.md5mesh",72,54)==72);
+    assert(ReachProjection::ModelFov("models/md5/weapons/reach_rocket/view.md5mesh",60,54)==54);
 }
