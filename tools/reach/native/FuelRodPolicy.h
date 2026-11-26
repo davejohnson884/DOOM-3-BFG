@@ -8,6 +8,10 @@ inline float Speed(float distance) {
     float t=(distance-540.0f)/60.0f;t=t<0 ? 0 : (t>1 ? 1 : t);
     return 1800.0f-1020.0f*t;
 }
+inline bool Ignited(int ageMs) {return ageMs>=350;}
+inline float Maturity(int ageMs) {
+    const float t=(ageMs-300.0f)/100.0f;return t<0 ? 0 : (t>1 ? 1 : t);
+}
 inline bool Bounce(bool actor,float speed,float incidence) {
     return !actor && std::isfinite(speed) && std::isfinite(incidence) &&
         speed>=1680.0f && speed<=2400.0f && incidence>0 && incidence<=.70710678f;

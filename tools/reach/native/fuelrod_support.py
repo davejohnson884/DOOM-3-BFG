@@ -135,4 +135,12 @@ def extend(changed,replace):
   else:
    expr='!idStr::Icmpn('+('shader->GetName()' if f.endswith('RenderBackend.cpp') else 'stage->material->GetName()')+',"reach/rocket/fx/",16)';new=expr.replace('reach/rocket/fx/",16','reach/fuelrod/fx/",17')
   assert expr in s;s=s.replace(expr,'('+expr+' || '+new+')');changed[f]=s
+ # Extend only the Fuel Rod launch and Think branches.
+ from pathlib import Path
+ f='neo/d3xp/Projectile.cpp';s=changed[f]
+ anchor='spawnArgs.SetVector("_fuel_previous",start);spawnArgs.SetFloat("_fuel_distance",0);'
+ s=replace(s,anchor,anchor+'\n        spawnArgs.SetInt("_fuel_launchTime",gameLocal.time);spawnArgs.SetBool("_fuel_ignited",false);\n        spawnArgs.Set("smoke_fly",spawnArgs.GetString("smoke_fly_arming","reach_fuelrod_arming.prt"));',f)
+ anchor='if(!common->IsMultiplayer() && state==LAUNCHED && spawnArgs.GetBool("reach_fuelrod")) {\n'
+ s=replace(s,anchor,anchor+(Path(__file__).resolve().parent/'FuelRodFlight.cpp').read_text()+'\n',f)
+ changed[f]=s
  return changed
