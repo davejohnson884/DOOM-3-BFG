@@ -1,15 +1,15 @@
-// Source projectile effect: .35 s arming, .10 s ignition burst, then sustained fire.
+// Doom corridor adaptation: .10 s launch phase; retain the existing ignition burst and mature effect.
 // All state uses the saved spawn dictionary; no script or save-layout change.
 int fuelLaunch=spawnArgs.GetInt("_fuel_launchTime","-1");
 if(fuelLaunch<0) {
     // A v1 projectile was already using the mature effect. Do not replay ignition.
-    fuelLaunch=gameLocal.time-350;spawnArgs.SetInt("_fuel_launchTime",fuelLaunch);
+    fuelLaunch=gameLocal.time-130;spawnArgs.SetInt("_fuel_launchTime",fuelLaunch);
     spawnArgs.SetBool("_fuel_ignited",true);
 }
 const int fuelAge=gameLocal.time>=fuelLaunch ? gameLocal.time-fuelLaunch : 0;
 const float fuelMaturity=ReachFuelRod::Maturity(fuelAge);
 renderEntity.shaderParms[7]=fuelMaturity;
-const float fuelFlash=1.0f-idMath::Fabs(float(fuelAge-350))/65.0f;
+const float fuelFlash=1.0f-idMath::Fabs(float(fuelAge-100))/35.0f;
 renderEntity.shaderParms[8]=fuelFlash>0 ? fuelFlash : 0;
 const idVec3 fuelBaseColor=spawnArgs.GetVector("light_color","1 2.1 .16");
 const float fuelLightGain=.20f+.80f*fuelMaturity;
